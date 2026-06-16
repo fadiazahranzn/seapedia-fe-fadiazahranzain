@@ -3,6 +3,7 @@
 use App\Http\Controllers\AddressController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
+use App\Http\Controllers\DeliveryController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\PromoController;
@@ -92,5 +93,17 @@ Route::middleware('auth:api')->group(function () {
     Route::post('buyer/checkout', [OrderController::class, 'checkout']);
     Route::get('buyer/orders', [OrderController::class, 'index']);
     Route::get('buyer/orders/{order}', [OrderController::class, 'show']);
+    Route::get('buyer/orders/{order}/tracking', [DeliveryController::class, 'trackOrder']);
     Route::get('buyer/report', [OrderController::class, 'buyerReport']);
+
+    // Driver - jobs
+    Route::get('driver/jobs', [DeliveryController::class, 'availableJobs']);
+    Route::get('driver/jobs/{delivery}', [DeliveryController::class, 'showJob']);
+    Route::patch('driver/jobs/{delivery}/take', [DeliveryController::class, 'takeJob']);
+    Route::patch('driver/jobs/{delivery}/complete', [DeliveryController::class, 'completeJob']);
+    Route::get('driver/my-jobs', [DeliveryController::class, 'myJobs']);
+    Route::get('driver/active-job', [DeliveryController::class, 'myActiveJob']);
+
+    // Seller - tracking
+    Route::get('seller/orders/{order}/tracking', [DeliveryController::class, 'trackOrder']);
 });

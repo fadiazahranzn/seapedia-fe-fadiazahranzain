@@ -25,6 +25,7 @@ export const buyerApi = {
   checkout: (data) => api.post('/buyer/checkout', data),
   getOrders: () => api.get('/buyer/orders'),
   getOrder: (id) => api.get(`/buyer/orders/${id}`),
+  getTracking: (id) => api.get(`/buyer/orders/${id}/tracking`),
   getReport: () => api.get('/buyer/report'),
 
   // Discounts

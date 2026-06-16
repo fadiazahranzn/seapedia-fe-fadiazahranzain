@@ -11,21 +11,42 @@
     <template v-else-if="order">
       <div class="flex items-center justify-between mb-4">
         <h1 class="text-xl font-bold">Pesanan #{{ order.id }}</h1>
-        <Badge :class="statusColor(order.status)">{{ statusLabel(order.status) }}</Badge>
+        <span :class="statusColor(order.status)" class="text-xs px-3 py-1 rounded-full font-medium">{{ statusLabel(order.status) }}</span>
       </div>
 
       <!-- Status timeline -->
       <Card class="mb-4">
         <CardContent class="pt-6">
-          <h2 class="font-semibold mb-4">Status Pesanan</h2>
-          <div class="space-y-3">
-            <div v-for="(hist, i) in order.status_histories" :key="i" class="flex gap-3 items-start">
-              <div class="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
-              <div>
-                <p class="text-sm font-medium">{{ statusLabel(hist.status) }}</p>
-                <p class="text-xs text-muted-foreground">{{ formatDate(hist.created_at) }}</p>
-                <p v-if="hist.note" class="text-xs text-muted-foreground">{{ hist.note }}</p>
-              </div>
+          <h2 class="font-semibold mb-4">Riwayat Status</h2>
+          <div class="space-y-0 pl-2 border-l-2 border-muted">
+            <div v-for="(hist, i) in order.status_histories" :key="i" class="relative pl-4 pb-4 last:pb-0">
+              <span class="absolute -left-[9px] top-1 w-3 h-3 rounded-full border-2 border-primary bg-background" />
+              <p class="text-sm font-medium">{{ statusLabel(hist.status) }}</p>
+              <p class="text-xs text-muted-foreground">{{ formatDate(hist.created_at) }}</p>
+              <p v-if="hist.note" class="text-xs text-muted-foreground">{{ hist.note }}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <!-- Delivery tracking -->
+      <Card v-if="tracking?.delivery" class="mb-4">
+        <CardContent class="pt-6">
+          <h2 class="font-semibold mb-3 flex items-center gap-2">
+            <Truck class="w-4 h-4" /> Info Pengiriman
+          </h2>
+          <div class="space-y-1 text-sm">
+            <div class="flex justify-between">
+              <span class="text-muted-foreground">Driver</span>
+              <span class="font-medium">{{ tracking.delivery.driver?.name ?? 'Belum ada driver' }}</span>
+            </div>
+            <div v-if="tracking.delivery.picked_up_at" class="flex justify-between">
+              <span class="text-muted-foreground">Diambil</span>
+              <span>{{ formatDate(tracking.delivery.picked_up_at) }}</span>
+            </div>
+            <div v-if="tracking.delivery.delivered_at" class="flex justify-between">
+              <span class="text-muted-foreground">Diterima</span>
+              <span>{{ formatDate(tracking.delivery.delivered_at) }}</span>
             </div>
           </div>
         </CardContent>
@@ -62,7 +83,10 @@
           <div class="space-y-2 text-sm">
             <div class="flex justify-between"><span class="text-muted-foreground">Subtotal</span><span>{{ formatPrice(order.subtotal) }}</span></div>
             <div class="flex justify-between"><span class="text-muted-foreground">Ongkir ({{ methodLabel(order.delivery_method) }})</span><span>{{ formatPrice(order.delivery_fee) }}</span></div>
-            <div v-if="order.discount_amount > 0" class="flex justify-between text-green-600"><span>Diskon</span><span>-{{ formatPrice(order.discount_amount) }}</span></div>
+            <div v-if="order.discount_amount > 0" class="flex justify-between text-green-600">
+              <span>Diskon ({{ [order.voucher?.code, order.promo?.code].filter(Boolean).join(' + ') || 'diskon' }})</span>
+              <span>-{{ formatPrice(order.discount_amount) }}</span>
+            </div>
             <div class="flex justify-between"><span class="text-muted-foreground">PPN 12%</span><span>{{ formatPrice(order.ppn_amount) }}</span></div>
             <div class="flex justify-between font-bold pt-2 border-t text-base">
               <span>Total</span><span class="text-primary">{{ formatPrice(order.total) }}</span>
@@ -79,15 +103,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft } from '@lucide/vue'
+import { ArrowLeft, Truck } from '@lucide/vue'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { buyerApi } from '@/services/buyer'
 
 const route = useRoute()
 const router = useRouter()
 const order = ref(null)
+const tracking = ref(null)
 const loading = ref(true)
 
 function formatPrice(p) {
@@ -103,13 +127,17 @@ function statusLabel(s) {
   return { sedang_dikemas: 'Sedang Dikemas', menunggu_pengirim: 'Menunggu Pengirim', sedang_dikirim: 'Sedang Dikirim', pesanan_selesai: 'Pesanan Selesai', dikembalikan: 'Dikembalikan' }[s] || s
 }
 function statusColor(s) {
-  return { sedang_dikemas: 'bg-yellow-100 text-yellow-800', menunggu_pengirim: 'bg-blue-100 text-blue-800', sedang_dikirim: 'bg-orange-100 text-orange-800', pesanan_selesai: 'bg-green-100 text-green-800', dikembalikan: 'bg-red-100 text-red-800' }[s] || ''
+  return { sedang_dikemas: 'bg-yellow-100 text-yellow-800', menunggu_pengirim: 'bg-blue-100 text-blue-800', sedang_dikirim: 'bg-indigo-100 text-indigo-800', pesanan_selesai: 'bg-green-100 text-green-800', dikembalikan: 'bg-red-100 text-red-800' }[s] || ''
 }
 
 onMounted(async () => {
   try {
-    const { data } = await buyerApi.getOrder(route.params.id)
-    order.value = data.data
+    const [orderRes, trackingRes] = await Promise.all([
+      buyerApi.getOrder(route.params.id),
+      buyerApi.getTracking(route.params.id).catch(() => null),
+    ])
+    order.value = orderRes.data.data
+    tracking.value = trackingRes?.data?.data ?? null
   } finally { loading.value = false }
 })
 </script>

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Delivery;
 use App\Models\Order;
 use App\Models\OrderStatusHistory;
 use App\Models\Promo;
@@ -390,6 +391,12 @@ class OrderController extends Controller
                     'amount'      => $order->subtotal - $order->discount_amount,
                     'description' => "Pendapatan dari pesanan #{$order->id}",
                 ]
+            );
+
+            // Buat delivery record agar driver bisa ambil job
+            Delivery::firstOrCreate(
+                ['order_id' => $order->id],
+                ['status' => 'available']
             );
         });
 

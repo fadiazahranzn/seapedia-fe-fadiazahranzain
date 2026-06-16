@@ -61,6 +61,7 @@ const routes = [
     children: [
       { path: '', redirect: '/driver/jobs' },
       { path: 'jobs', component: () => import('@/views/driver/JobsView.vue') },
+      { path: 'my-jobs', component: () => import('@/views/driver/MyJobsView.vue') },
     ],
   },
 
