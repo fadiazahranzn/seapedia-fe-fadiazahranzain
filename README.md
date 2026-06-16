@@ -9,8 +9,20 @@ Platform e-commerce multi-role berbasis web yang memungkinkan Buyer berbelanja, 
 - [Struktur Project](#struktur-project)
 - [Cara Menjalankan](#cara-menjalankan)
 - [Konfigurasi Environment](#konfigurasi-environment)
+- [Demo Accounts](#demo-accounts)
 - [Role & Akses](#role--akses)
 - [Alur Penggunaan](#alur-penggunaan)
+- [Aturan Bisnis](#aturan-bisnis)
+- [Security](#security)
+- [Testing Guide](#testing-guide)
+- [API Overview](#api-overview)
+- [Konfigurasi Environment](#konfigurasi-environment)
+- [Demo Accounts](#demo-accounts)
+- [Role & Akses](#role--akses)
+- [Alur Penggunaan](#alur-penggunaan)
+- [Aturan Bisnis](#aturan-bisnis)
+- [Security](#security)
+- [Testing Guide](#testing-guide)
 - [API Overview](#api-overview)
 
 ---
@@ -174,6 +186,25 @@ JWT_TTL=1440      # token lifetime dalam menit (default 24 jam)
 
 ---
 
+## Demo Accounts
+
+Semua akun sudah tersedia setelah menjalankan `php artisan migrate --seed`.
+
+| Role | Username | Email | Password |
+|---|---|---|---|
+| Admin | `admin` | admin@seapedia.com | `admin123` |
+| Seller | `seller1` | seller1@seapedia.com | `seller123` |
+| Seller | `seller2` | seller2@seapedia.com | `seller123` |
+| Buyer | `buyer1` | buyer1@seapedia.com | `buyer123` |
+| Buyer | `buyer2` | buyer2@seapedia.com | `buyer123` |
+| Driver | `driver1` | driver1@seapedia.com | `driver123` |
+| Driver | `driver2` | driver2@seapedia.com | `driver123` |
+| Multi-role (Buyer+Seller+Driver) | `multiuser` | multi@seapedia.com | `multi123` |
+
+> `buyer1` memiliki saldo awal Rp 5.000.000 dan sudah memiliki alamat pengiriman.
+
+---
+
 ## Role & Akses
 
 Satu user dapat memiliki lebih dari satu role. Role aktif ditentukan saat login dan tersimpan di JWT payload.
@@ -214,6 +245,162 @@ Admin menjalankan `POST /api/admin/overdue/process`:
 - Status pesanan berubah ke `dikembalikan`
 - Buyer mendapat refund penuh ke wallet
 - Pendapatan seller di-reversal
+
+---
+
+## Aturan Bisnis
+
+### Single-Store Checkout
+Keranjang hanya bisa berisi produk dari **satu toko**. Jika buyer mencoba menambah produk dari toko lain, sistem akan menolak dan menampilkan pesan error. Buyer harus mengosongkan keranjang terlebih dahulu sebelum bisa berbelanja dari toko yang berbeda. Aturan ini diterapkan di backend (CartController) dan dijelaskan di UI.
+
+### Perhitungan Checkout
+
+```
+Subtotal        = Σ (harga × jumlah) per item
+Discount        = voucher_discount + promo_discount
+Tax Base        = subtotal + delivery_fee - discount
+PPN 12%         = tax_base × 0.12
+Total           = tax_base + ppn
+```
+
+PPN dihitung **setelah** diskon dan ongkir. Ini berarti diskon mengurangi dasar pengenaan pajak.
+
+### Delivery Fee
+
+| Metode | Biaya | SLA |
+|---|---|---|
+| Instant | Rp 25.000 | 1 hari |
+| Next Day | Rp 15.000 | 2 hari |
+| Regular | Rp 10.000 | 5 hari |
+
+### Aturan Diskon (Voucher & Promo)
+- Voucher dan Promo **bisa dikombinasikan** dalam satu checkout.
+- Voucher memiliki batas penggunaan (`usage_limit`) dan tanggal kadaluarsa.
+- Promo hanya memiliki tanggal kadaluarsa (tanpa batas penggunaan).
+- Kedua tipe diskon mendukung `percentage` (%) dan `fixed` (nominal Rp).
+- Jika tipe `percentage`, nilai diskon maksimal 100%.
+- Discount type `percentage` dapat dibatasi dengan `max_discount`.
+
+### Driver Earning
+Driver mendapatkan **80%** dari delivery fee pesanan yang berhasil dikirim.
+
+| Metode | Delivery Fee | Earning Driver |
+|---|---|---|
+| Instant | Rp 25.000 | Rp 20.000 |
+| Next Day | Rp 15.000 | Rp 12.000 |
+| Regular | Rp 10.000 | Rp 8.000 |
+
+Earning dicatat di tabel `deliveries.earning` setelah driver menyelesaikan job.
+
+### Overdue & Simulasi Waktu
+Pesanan dianggap overdue jika melewati SLA berdasarkan metode pengiriman. Admin dapat memproses overdue melalui:
+
+1. **Lihat overdue**: `GET /api/admin/overdue`
+2. **Proses refund**: `POST /api/admin/overdue/process`
+3. **Simulasi hari berikutnya**: `POST /api/admin/simulate-next-day` — memundurkan `created_at` semua pesanan aktif 1 hari (untuk demo)
+
+Saat overdue diproses:
+- Status pesanan → `dikembalikan`
+- Saldo buyer dikembalikan penuh
+- Pendapatan seller di-reversal
+- Stok produk dikembalikan
+- Semua tercatat di status history & wallet transactions
+
+Sistem mencegah double refund, double reversal, dan double stock restoration.
+
+---
+
+## Security
+
+### SQL Injection
+Semua query database menggunakan **Laravel Eloquent ORM** dengan parameterized binding. Tidak ada raw query yang menerima input user langsung. Input yang digunakan di `LIKE` query (search produk) di-escape melalui mekanisme binding Laravel.
+
+### XSS (Cross-Site Scripting)
+- **Frontend**: Vue 3 secara default melakukan escaping pada semua data yang di-render via template (`{{ }}`). Data user tidak pernah di-render dengan `v-html`.
+- **Backend**: Semua input divalidasi dan dibatasi panjangnya sebelum disimpan. Output API berupa JSON yang di-parse browser, bukan HTML mentah.
+- Review comments dirender sebagai teks biasa — script tag tidak akan dieksekusi.
+
+### Input Validation
+Validasi dilakukan di dua lapisan:
+- **Frontend**: cek sebelum submit (password match, min/max nilai, field wajib)
+- **Backend**: Laravel `$request->validate()` di setiap controller dengan aturan tipe data, panjang, format, dan keunikan
+
+### Session & Token
+- Autentikasi menggunakan **JWT (JSON Web Token)** via `tymon/jwt-auth`
+- Token lifetime: **1440 menit (24 jam)**, dapat dikonfigurasi via `JWT_TTL` di `.env`
+- Active role disimpan dalam JWT payload (`active_role` claim)
+- Logout menginvalidasi token di server (blacklist)
+- Setelah logout, token yang sama tidak dapat digunakan kembali
+
+### Role-Based Access Control (RBAC)
+- Setiap endpoint terproteksi memverifikasi `active_role` dari JWT payload — bukan dari request body atau query string
+- Seller hanya bisa mengakses/memodifikasi produk dan pesanan milik tokonya sendiri
+- Buyer hanya bisa mengakses alamat, pesanan, dan cart miliknya sendiri
+- Driver hanya bisa menyelesaikan job yang dia ambil sendiri
+- Admin-only endpoints menolak semua role lain dengan HTTP 403
+
+---
+
+## Testing Guide
+
+### End-to-End Demo Flow
+
+#### 1. Buyer Checkout
+```
+Login sebagai buyer1 (role: buyer)
+→ Jelajahi produk di /products
+→ Tambah produk ke keranjang
+→ Buka /buyer/cart → pilih metode pengiriman
+→ Masukkan kode voucher (jika ada) → Preview total
+→ Pilih alamat → Checkout
+→ Cek /buyer/orders untuk melihat pesanan
+```
+
+#### 2. Seller Proses Pesanan
+```
+Login sebagai seller1 (role: seller)
+→ Buka /seller/orders → lihat pesanan masuk (status: Sedang Dikemas)
+→ Klik "Proses" → status berubah ke Menunggu Pengirim
+```
+
+#### 3. Driver Antar Pesanan
+```
+Login sebagai driver1 (role: driver)
+→ Buka /driver → lihat job tersedia
+→ Klik "Ambil Job" → status berubah ke Sedang Dikirim
+→ Klik "Selesai" → status berubah ke Pesanan Selesai
+```
+
+#### 4. Admin - Overdue Simulation
+```
+Login sebagai admin (role: admin)
+→ Buka /admin/dashboard → lihat statistik
+→ POST /api/admin/simulate-next-day beberapa kali (lewati SLA)
+→ GET /api/admin/overdue → lihat pesanan overdue
+→ POST /api/admin/overdue/process → proses refund otomatis
+```
+
+#### 5. Security Test
+```
+XSS: Input <script>alert('xss')</script> di form review
+→ Teks tampil aman sebagai literal, tidak dieksekusi
+
+SQL Injection: Input ' OR '1'='1 di form login/search
+→ Login gagal dengan pesan error biasa, tidak bypass auth
+```
+
+### Membuat Voucher untuk Demo
+```bash
+# via API (login sebagai admin terlebih dahulu)
+POST /api/admin/vouchers
+{
+  "code": "DEMO20",
+  "discount_type": "percentage",
+  "discount_value": 20,
+  "usage_limit": 100,
+  "expires_at": "2027-12-31T23:59:59"
+}
+```
 
 ---
 
