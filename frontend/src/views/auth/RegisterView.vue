@@ -1,66 +1,111 @@
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-background px-4">
-    <div class="w-full max-w-sm">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold tracking-tight">SEAPEDIA</h1>
-        <p class="text-muted-foreground mt-1 text-sm">Buat akun baru</p>
+  <div class="auth-bg">
+    <div class="blob blob-1" />
+    <div class="blob blob-2" />
+    <div class="blob blob-3" />
+
+    <div class="glass-card">
+      <!-- Brand -->
+      <div class="brand">
+        <div class="brand-logo">
+          <div class="brand-icon">S</div>
+          <span class="brand-name">SEAPEDIA</span>
+        </div>
+        <h1 class="form-title">Buat akun baru</h1>
+        <p class="form-subtitle">Isi data di bawah untuk mendaftar</p>
       </div>
 
-      <Card>
-        <CardContent class="pt-6">
-          <form @submit.prevent="handleRegister" class="space-y-4">
-            <div class="space-y-2">
-              <Label for="name">Nama Lengkap</Label>
-              <Input id="name" v-model="form.name" placeholder="Nama kamu" required />
-            </div>
+      <!-- Tabs -->
+      <div class="tabs">
+        <RouterLink to="/login" class="tab">Masuk</RouterLink>
+        <button class="tab active">Daftar</button>
+      </div>
 
-            <div class="space-y-2">
-              <Label for="username">Username</Label>
-              <Input id="username" v-model="form.username" placeholder="username" required />
-            </div>
+      <form @submit.prevent="handleRegister">
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="name">Nama Lengkap</label>
+            <input id="name" v-model="form.name" type="text" placeholder="Nama kamu" required />
+          </div>
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input id="username" v-model="form.username" type="text" placeholder="username" required />
+          </div>
+        </div>
 
-            <div class="space-y-2">
-              <Label for="email">Email</Label>
-              <Input id="email" v-model="form.email" type="email" placeholder="email@contoh.com" required />
-            </div>
+        <div class="divider" />
 
-            <div class="space-y-2">
-              <Label for="password">Password</Label>
-              <Input id="password" v-model="form.password" type="password" placeholder="••••••••" required />
-            </div>
+        <div class="form-group">
+          <label for="email">Email</label>
+          <input id="email" v-model="form.email" type="email" placeholder="email@contoh.com" required />
+        </div>
 
-            <div class="space-y-2">
-              <Label for="password_confirmation">Konfirmasi Password</Label>
-              <Input id="password_confirmation" v-model="form.password_confirmation" type="password" placeholder="••••••••" required />
-            </div>
-
-            <div class="space-y-2">
-              <Label for="role">Daftar sebagai</Label>
-              <select
-                id="role"
-                v-model="form.role"
-                class="w-full border border-input rounded-md px-3 py-2 text-sm bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+        <div class="grid-2">
+          <div class="form-group">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <input
+                id="password"
+                v-model="form.password"
+                :type="showPw1 ? 'text' : 'password'"
+                class="pw-input"
+                placeholder="min. 6 karakter"
                 required
-              >
-                <option value="">Pilih role</option>
-                <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
-                <option value="driver">Driver</option>
-              </select>
+              />
+              <button type="button" class="pw-toggle" @click="showPw1 = !showPw1">
+                <EyeOff v-if="showPw1" :size="14" />
+                <Eye v-else :size="14" />
+              </button>
             </div>
+          </div>
+          <div class="form-group">
+            <label for="password_confirmation">Konfirmasi</label>
+            <div class="input-wrap">
+              <input
+                id="password_confirmation"
+                v-model="form.password_confirmation"
+                :type="showPw2 ? 'text' : 'password'"
+                class="pw-input"
+                placeholder="ulangi password"
+                required
+              />
+              <button type="button" class="pw-toggle" @click="showPw2 = !showPw2">
+                <EyeOff v-if="showPw2" :size="14" />
+                <Eye v-else :size="14" />
+              </button>
+            </div>
+          </div>
+        </div>
 
-            <p v-if="error" class="text-destructive text-sm">{{ error }}</p>
+        <div class="divider" />
 
-            <Button type="submit" class="w-full" :disabled="loading">
-              {{ loading ? 'Memproses...' : 'Daftar' }}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+        <div class="form-group">
+          <label for="role">Daftar sebagai</label>
+          <div class="select-wrap">
+            <select id="role" v-model="form.role" required>
+              <option value="">Pilih role</option>
+              <option value="buyer">Buyer</option>
+              <option value="seller">Seller</option>
+              <option value="driver">Driver</option>
+            </select>
+            <ChevronDown :size="14" class="select-icon" />
+          </div>
+        </div>
 
-      <p class="text-center text-sm text-muted-foreground mt-4">
+        <div v-if="error" class="error-box">
+          <AlertCircle :size="14" />
+          {{ error }}
+        </div>
+
+        <button type="submit" class="btn-primary" :disabled="loading">
+          <span v-if="loading" class="spinner" />
+          {{ loading ? 'Memproses...' : 'Buat Akun' }}
+        </button>
+      </form>
+
+      <p class="footer-link">
         Sudah punya akun?
-        <RouterLink to="/login" class="text-primary font-medium hover:underline">Masuk</RouterLink>
+        <RouterLink to="/login">Masuk</RouterLink>
       </p>
     </div>
   </div>
@@ -70,11 +115,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
+import { Eye, EyeOff, AlertCircle, ChevronDown } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -82,6 +124,8 @@ const router = useRouter()
 const form = ref({ name: '', username: '', email: '', password: '', password_confirmation: '', role: '' })
 const error = ref('')
 const loading = ref(false)
+const showPw1 = ref(false)
+const showPw2 = ref(false)
 
 async function handleRegister() {
   error.value = ''
@@ -106,3 +150,225 @@ async function handleRegister() {
   }
 }
 </script>
+
+<style scoped>
+.auth-bg {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.55;
+  pointer-events: none;
+}
+.blob-1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, #6366f1, #8b5cf6);
+  top: -150px; left: -100px;
+  animation: float1 8s ease-in-out infinite;
+}
+.blob-2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, #06b6d4, #3b82f6);
+  bottom: -100px; right: -80px;
+  animation: float2 10s ease-in-out infinite;
+}
+.blob-3 {
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, #ec4899, #f43f5e);
+  top: 40%; left: 55%;
+  animation: float3 7s ease-in-out infinite;
+}
+@keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+@keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-40px)} }
+@keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,20px)} }
+
+.glass-card {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+.brand { text-align: center; margin-bottom: 24px; }
+.brand-logo { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.brand-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: white; font-weight: 700;
+}
+.brand-name { font-size: 20px; font-weight: 700; color: #fff; letter-spacing: -0.02em; }
+.form-title { font-size: 22px; font-weight: 600; color: #fff; letter-spacing: -0.02em; }
+.form-subtitle { font-size: 13px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+
+.tabs {
+  display: flex;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 20px;
+}
+.tab {
+  flex: 1;
+  padding: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.5);
+  text-align: center;
+  cursor: pointer;
+  border-radius: 8px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  text-decoration: none;
+  transition: all .2s;
+  display: block;
+}
+.tab.active, .tab:hover {
+  background: rgba(255,255,255,0.15);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.form-group { margin-bottom: 14px; }
+.divider { height: 1px; background: rgba(255,255,255,0.1); margin: 4px 0 14px; }
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+input, select {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+  appearance: none;
+  -webkit-appearance: none;
+}
+input::placeholder { color: rgba(255,255,255,0.28); font-size: 12px; }
+input:focus, select:focus {
+  border-color: rgba(99,102,241,0.8);
+  background: rgba(255,255,255,0.12);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.25);
+}
+select option { background: #302b63; color: #fff; }
+
+.input-wrap { position: relative; }
+.pw-input { padding-right: 40px !important; }
+.pw-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  transition: color .15s;
+}
+.pw-toggle:hover { color: rgba(255,255,255,0.8); }
+
+.select-wrap { position: relative; }
+.select-wrap select { padding-right: 32px; cursor: pointer; }
+.select-icon {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.4);
+  pointer-events: none;
+}
+
+.error-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(244,63,94,0.15);
+  border: 1px solid rgba(244,63,94,0.35);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #fda4af;
+  margin-bottom: 12px;
+}
+
+.btn-primary {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 4px;
+  background: linear-gradient(135deg, #6366f1, #06b6d4);
+  color: #fff;
+  box-shadow: 0 4px 20px rgba(99,102,241,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity .15s, transform .1s, box-shadow .15s;
+  letter-spacing: -0.01em;
+}
+.btn-primary:hover:not(:disabled) { opacity: .9; box-shadow: 0 6px 24px rgba(99,102,241,0.5); }
+.btn-primary:active:not(:disabled) { transform: scale(.98); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; }
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.footer-link {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(255,255,255,0.45);
+  margin-top: 18px;
+}
+.footer-link a { color: #a5b4fc; font-weight: 500; text-decoration: none; }
+.footer-link a:hover { color: #c7d2fe; text-decoration: underline; }
+</style>
