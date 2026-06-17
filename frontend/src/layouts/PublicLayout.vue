@@ -1,19 +1,34 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-white">
-    <!-- Navbar -->
+  <div class="layout">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <strong>🎉 Flash Sale!</strong> Diskon hingga 50% untuk produk pilihan hari ini.
+    </div>
+
+    <!-- NAVBAR -->
     <header class="navbar">
       <div class="navbar-inner">
         <RouterLink to="/" class="nav-brand">
           <div class="nav-brand-icon">S</div>
-          SEAPEDIA
+          <span class="brand-text">SEAPEDIA</span>
         </RouterLink>
 
         <nav class="nav-links">
+          <RouterLink to="/">Beranda</RouterLink>
           <RouterLink to="/products">Produk</RouterLink>
           <RouterLink to="/reviews">Ulasan</RouterLink>
         </nav>
 
         <div class="nav-actions">
+          <div class="nav-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Cari produk...
+          </div>
+
+          <RouterLink to="/buyer/cart" class="nav-icon-btn" v-if="auth.isLoggedIn && auth.activeRole === 'buyer'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+          </RouterLink>
+
           <template v-if="!auth.isLoggedIn">
             <RouterLink to="/login" class="btn-ghost">Masuk</RouterLink>
             <RouterLink to="/register" class="btn-primary-sm">Daftar</RouterLink>
@@ -22,6 +37,7 @@
             <span class="role-badge capitalize">{{ auth.activeRole }}</span>
             <RouterLink :to="`/${auth.activeRole}`" class="btn-primary-sm">Dashboard</RouterLink>
           </template>
+
           <button class="mobile-menu-btn" @click="mobileOpen = !mobileOpen">
             <Menu :size="20" />
           </button>
@@ -30,6 +46,7 @@
 
       <!-- Mobile nav -->
       <div v-if="mobileOpen" class="mobile-nav">
+        <RouterLink to="/" @click="mobileOpen = false">Beranda</RouterLink>
         <RouterLink to="/products" @click="mobileOpen = false">Produk</RouterLink>
         <RouterLink to="/reviews" @click="mobileOpen = false">Ulasan</RouterLink>
         <template v-if="!auth.isLoggedIn">
@@ -39,23 +56,40 @@
       </div>
     </header>
 
-    <main class="flex-1">
+    <main class="main-content">
       <RouterView />
     </main>
 
-    <!-- Footer -->
+    <!-- FOOTER -->
     <footer class="footer">
       <div class="footer-inner">
-        <div class="footer-brand">
-          <div class="nav-brand-icon" style="width:28px;height:28px;font-size:12px;">S</div>
-          SEAPEDIA
+        <div class="footer-col-brand">
+          <div class="footer-brand">
+            <div class="nav-brand-icon" style="width:28px;height:28px;font-size:11px;">S</div>
+            <span class="brand-text" style="font-size:15px;">SEAPEDIA</span>
+          </div>
+          <p class="footer-desc">Platform marketplace multi-peran yang menghubungkan pembeli, penjual, dan driver.</p>
         </div>
-        <p class="footer-copy">© 2025 SEAPEDIA. Platform marketplace multi-peran.</p>
-        <div class="footer-links">
-          <RouterLink to="/products">Produk</RouterLink>
-          <RouterLink to="/reviews">Ulasan</RouterLink>
-          <RouterLink to="/register">Daftar</RouterLink>
+        <div class="footer-col">
+          <div class="footer-heading">Platform</div>
+          <div class="footer-links">
+            <RouterLink to="/">Beranda</RouterLink>
+            <RouterLink to="/products">Produk</RouterLink>
+            <RouterLink to="/reviews">Ulasan</RouterLink>
+          </div>
         </div>
+        <div class="footer-col">
+          <div class="footer-heading">Bergabung</div>
+          <div class="footer-links">
+            <RouterLink to="/register">Daftar Pembeli</RouterLink>
+            <RouterLink to="/register">Buka Toko</RouterLink>
+            <RouterLink to="/register">Jadi Driver</RouterLink>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2025 SEAPEDIA. All rights reserved.</span>
+        <span>Built with ❤️ for COMPFEST SEA</span>
       </div>
     </footer>
   </div>
@@ -72,173 +106,138 @@ const mobileOpen = ref(false)
 </script>
 
 <style scoped>
+.layout { min-height: 100vh; display: flex; flex-direction: column; background: #fdf2f5; }
+
+/* ── TOPBAR ── */
+.topbar {
+  background: #c41952; text-align: center;
+  padding: 8px 24px; font-size: 12px; font-weight: 500; color: #fff;
+}
+.topbar strong { font-weight: 700; }
+
+/* ── NAVBAR ── */
 .navbar {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  background: rgba(255,255,255,0.92);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid #e2e8f0;
-  height: 64px;
-  display: flex;
-  align-items: center;
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid #f3e0e6;
+  display: flex; flex-direction: column;
 }
 .navbar-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0 24px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
+  max-width: 1200px; margin: 0 auto; padding: 0 24px;
+  width: 100%; height: 64px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
 }
 .nav-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.03em;
-  text-decoration: none;
+  display: flex; align-items: center; gap: 8px;
+  text-decoration: none; flex-shrink: 0;
+}
+.brand-text {
+  font-family: 'Brawler', serif;
+  font-size: 18px; font-weight: 700; color: #1a1a1a; letter-spacing: 0.01em;
 }
 .nav-brand-icon {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, #6366f1, #06b6d4);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  flex-shrink: 0;
+  width: 32px; height: 32px; background: #c41952;
+  border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; font-weight: 900; flex-shrink: 0;
 }
 .nav-links {
-  display: none;
-  align-items: center;
-  gap: 4px;
+  display: none; align-items: center; gap: 2px;
 }
 @media (min-width: 768px) { .nav-links { display: flex; } }
 .nav-links a {
-  font-size: 14px;
-  font-weight: 500;
-  color: #64748b;
-  padding: 6px 12px;
-  border-radius: 0.5rem;
-  transition: color .15s, background .15s;
-  text-decoration: none;
+  font-size: 13px; font-weight: 500; color: #a06070;
+  padding: 6px 12px; border-radius: 8px;
+  transition: color .15s, background .15s; text-decoration: none;
 }
-.nav-links a:hover, .nav-links a.router-link-active { color: #0f172a; background: #f1f5f9; }
+.nav-links a:hover,
+.nav-links a.router-link-exact-active { color: #c41952; background: #fce4ec; }
 
-.nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.nav-actions { display: flex; align-items: center; gap: 8px; }
+.nav-search {
+  display: none; align-items: center; gap: 8px;
+  background: #fdf2f5; border: 1px solid #f3e0e6;
+  border-radius: 8px; padding: 7px 14px;
+  font-size: 13px; color: #a06070; cursor: pointer;
 }
+@media (min-width: 900px) { .nav-search { display: flex; } }
+.nav-search svg { flex-shrink: 0; }
+
+.nav-icon-btn {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: #fdf2f5; border: 1px solid #f3e0e6;
+  display: flex; align-items: center; justify-content: center;
+  color: #a06070; transition: background .15s, color .15s; text-decoration: none;
+}
+.nav-icon-btn:hover { background: #fce4ec; color: #c41952; }
+
 .btn-ghost {
-  padding: 7px 16px;
-  border-radius: 0.5rem;
-  font-size: 14px;
-  font-weight: 500;
-  color: #334155;
-  background: none;
-  text-decoration: none;
+  padding: 7px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 500; color: #4b1f30;
+  background: none; text-decoration: none; transition: background .15s;
+}
+.btn-ghost:hover { background: #fce4ec; color: #c41952; }
+
+.btn-primary-sm {
+  padding: 7px 16px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; color: #fff;
+  background: #c41952; text-decoration: none;
   transition: background .15s;
 }
-.btn-ghost:hover { background: #f1f5f9; }
-.btn-primary-sm {
-  padding: 7px 16px;
-  border-radius: 0.5rem;
-  font-size: 14px;
-  font-weight: 600;
-  color: #fff;
-  background: #6366f1;
-  text-decoration: none;
-  transition: background .15s, box-shadow .15s;
-  box-shadow: 0 1px 3px rgb(99 102 241 / .3);
-}
-.btn-primary-sm:hover { background: #4f46e5; }
+.btn-primary-sm:hover { background: #a0133f; }
+
 .role-badge {
-  font-size: 12px;
-  font-weight: 600;
-  color: #6366f1;
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  border-radius: 9999px;
-  padding: 3px 10px;
-  display: none;
+  font-size: 12px; font-weight: 600; color: #c41952;
+  background: #fce4ec; border: 1px solid #f3c6d4;
+  border-radius: 9999px; padding: 3px 10px; display: none;
 }
 @media (min-width: 640px) { .role-badge { display: inline-block; } }
+
 .mobile-menu-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: 0.5rem;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #64748b;
-  transition: background .15s;
+  display: flex; align-items: center; justify-content: center;
+  padding: 6px; border-radius: 8px;
+  background: none; border: none; cursor: pointer;
+  color: #a06070; transition: background .15s;
 }
-.mobile-menu-btn:hover { background: #f1f5f9; }
+.mobile-menu-btn:hover { background: #fce4ec; color: #c41952; }
 @media (min-width: 768px) { .mobile-menu-btn { display: none; } }
 
 .mobile-nav {
-  border-top: 1px solid #e2e8f0;
-  padding: 12px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: #fff;
+  border-top: 1px solid #f3e0e6; padding: 12px 24px;
+  display: flex; flex-direction: column; gap: 4px; background: #fff;
 }
 .mobile-nav a {
-  display: block;
-  padding: 8px 12px;
-  font-size: 14px;
-  color: #64748b;
-  text-decoration: none;
-  border-radius: 0.5rem;
+  display: block; padding: 8px 12px; font-size: 14px;
+  color: #a06070; text-decoration: none; border-radius: 8px;
   transition: background .15s, color .15s;
 }
-.mobile-nav a:hover { background: #f1f5f9; color: #0f172a; }
+.mobile-nav a:hover { background: #fce4ec; color: #c41952; }
 
-/* Footer */
-.footer {
-  background: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  padding: 32px 24px;
-}
+/* ── MAIN ── */
+.main-content { flex: 1; }
+
+/* ── FOOTER ── */
+.footer { background: #fff; border-top: 1px solid #f3e0e6; padding: 48px 24px 0; }
 .footer-inner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
+  max-width: 1200px; margin: 0 auto;
+  display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 40px;
+  padding-bottom: 40px;
 }
 .footer-brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  font-size: 15px;
-  color: #0f172a;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
 }
-.footer-copy { font-size: 13px; color: #64748b; }
-.footer-links {
-  display: flex;
-  gap: 20px;
+.footer-desc { font-size: 13px; color: #a06070; line-height: 1.7; max-width: 280px; }
+.footer-heading {
+  font-size: 11px; font-weight: 700; color: #1a1a1a;
+  text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 14px;
 }
-.footer-links a {
-  font-size: 13px;
-  color: #64748b;
-  text-decoration: none;
-  transition: color .15s;
+.footer-links { display: flex; flex-direction: column; gap: 10px; }
+.footer-links a { font-size: 13px; color: #a06070; text-decoration: none; transition: color .15s; }
+.footer-links a:hover { color: #c41952; }
+.footer-bottom {
+  max-width: 1200px; margin: 0 auto;
+  padding: 20px 0; border-top: 1px solid #f3e0e6;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: #a06070;
 }
-.footer-links a:hover { color: #0f172a; }
 </style>
