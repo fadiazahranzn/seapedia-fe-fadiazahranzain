@@ -1,93 +1,131 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold mb-6">Laporan Belanja</h1>
+    <!-- Header -->
+    <div class="mb-6">
+      <h1 class="text-[22px] font-bold tracking-[-0.03em]">Laporan Belanja</h1>
+      <p class="text-[13px] text-muted-foreground mt-0.5">Ringkasan aktivitas belanja kamu</p>
+    </div>
 
-    <div v-if="loading" class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div v-for="i in 4" :key="i" class="h-24 bg-muted rounded-xl animate-pulse" />
+    <!-- Loading -->
+    <div v-if="loading">
+      <div class="h-64 bg-muted rounded-2xl animate-pulse" />
     </div>
 
     <template v-else>
-      <!-- Summary cards -->
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card>
-          <CardContent class="pt-5">
-            <p class="text-xs text-muted-foreground">Total Pesanan</p>
-            <p class="text-2xl font-bold mt-1">{{ report.summary.total_orders }}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="pt-5">
-            <p class="text-xs text-muted-foreground">Selesai</p>
-            <p class="text-2xl font-bold mt-1 text-green-600">{{ report.summary.completed_orders }}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="pt-5">
-            <p class="text-xs text-muted-foreground">Diproses</p>
-            <p class="text-2xl font-bold mt-1 text-yellow-600">{{ report.summary.pending_orders }}</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent class="pt-5">
-            <p class="text-xs text-muted-foreground">Total Belanja</p>
-            <p class="text-lg font-bold mt-1 text-primary">{{ formatPrice(report.summary.total_spent) }}</p>
-          </CardContent>
-        </Card>
-      </div>
 
-      <!-- Order list -->
-      <Card>
-        <CardContent class="pt-6">
-          <h2 class="font-semibold mb-4">Riwayat Transaksi</h2>
-          <div v-if="!report.orders?.length" class="text-center py-8 text-muted-foreground text-sm">Belum ada transaksi.</div>
-          <div v-else class="space-y-3">
-            <div v-for="order in report.orders" :key="order.id"
-              class="border rounded-lg p-4 hover:bg-muted/30 cursor-pointer transition-colors"
-              @click="$router.push(`/buyer/orders/${order.id}`)">
-              <div class="flex items-start justify-between gap-3">
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-sm font-medium">#{{ order.id }}</span>
-                    <span :class="statusClass(order.status)" class="text-xs px-2 py-0.5 rounded-full font-medium">
-                      {{ statusLabel(order.status) }}
-                    </span>
-                  </div>
-                  <p class="text-xs text-muted-foreground">{{ order.store?.name }} · {{ formatDate(order.created_at) }}</p>
-                  <p class="text-xs text-muted-foreground mt-1">{{ order.items?.length }} produk</p>
+      <!-- Transaction history -->
+      <div class="bg-card border rounded-2xl overflow-hidden">
+        <div class="px-5 py-4 border-b bg-muted/30 flex items-center justify-between">
+          <h2 class="text-[15px] font-bold">Riwayat Transaksi</h2>
+          <span class="text-[12px] text-muted-foreground">{{ filteredOrders.length }} transaksi</span>
+        </div>
+
+        <!-- Status filter chips -->
+        <div class="px-5 py-3 border-b flex items-center gap-2 overflow-x-auto scrollbar-none">
+          <button
+            v-for="f in filters"
+            :key="f.value"
+            class="shrink-0 text-[12px] font-semibold px-3.5 py-1.5 rounded-full border transition-all cursor-pointer"
+            :class="activeFilter === f.value
+              ? 'bg-primary text-white border-primary shadow-sm'
+              : 'bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-foreground'"
+            @click="activeFilter = f.value"
+          >
+            {{ f.label }}
+            <span
+              v-if="f.value !== 'all'"
+              class="ml-1 text-[10px] font-bold opacity-70"
+            >{{ filterCount(f.value) }}</span>
+          </button>
+        </div>
+
+        <div v-if="!filteredOrders.length" class="flex flex-col items-center gap-3 py-16 text-center">
+          <div class="w-12 h-12 rounded-2xl bg-muted flex items-center justify-center">
+            <ReceiptText class="w-5 h-5 text-muted-foreground/40" />
+          </div>
+          <p class="text-[14px] font-medium">Belum ada transaksi</p>
+          <p class="text-[12px] text-muted-foreground">Riwayat belanja kamu akan muncul di sini</p>
+        </div>
+
+        <div v-else class="divide-y">
+          <div
+            v-for="order in filteredOrders"
+            :key="order.id"
+            class="px-5 py-4 hover:bg-muted/30 cursor-pointer transition-colors group"
+            @click="$router.push(`/buyer/orders/${order.id}`)"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <!-- Left -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                  <span class="text-[13px] font-bold text-foreground">#{{ order.id }}</span>
+                  <span :class="statusClass(order.status)" class="text-[11px] px-2.5 py-0.5 rounded-full font-semibold">
+                    {{ statusLabel(order.status) }}
+                  </span>
+                  <!-- Voucher / Promo badges -->
+                  <span v-if="order.voucher" class="text-[10px] bg-blue-50 text-blue-600 border border-blue-100 px-2 py-0.5 rounded-full font-medium">
+                    Voucher
+                  </span>
+                  <span v-if="order.promo" class="text-[10px] bg-violet-50 text-violet-600 border border-violet-100 px-2 py-0.5 rounded-full font-medium">
+                    Promo
+                  </span>
                 </div>
-                <div class="text-right shrink-0">
-                  <p class="font-bold text-sm">{{ formatPrice(order.total) }}</p>
-                  <div class="mt-1 space-y-0.5 text-xs text-muted-foreground">
-                    <div v-if="order.discount_amount > 0" class="text-green-600">Diskon -{{ formatPrice(order.discount_amount) }}</div>
-                    <div>Ongkir {{ formatPrice(order.delivery_fee) }}</div>
-                    <div>PPN {{ formatPrice(order.ppn_amount) }}</div>
+                <p class="text-[12px] text-muted-foreground">
+                  <span class="font-medium text-foreground/70">{{ order.store?.name }}</span>
+                  <span class="mx-1.5">·</span>
+                  {{ formatDate(order.created_at) }}
+                </p>
+                <p class="text-[12px] text-muted-foreground mt-0.5">{{ order.items?.length }} produk</p>
+              </div>
+
+              <!-- Right -->
+              <div class="text-right shrink-0">
+                <p class="text-[14px] font-bold">{{ formatPrice(order.total) }}</p>
+                <div class="mt-1 space-y-0.5">
+                  <div v-if="order.discount_amount > 0" class="text-[11px] text-green-600 font-medium">
+                    Diskon −{{ formatPrice(order.discount_amount) }}
                   </div>
+                  <div class="text-[11px] text-muted-foreground">Ongkir {{ formatPrice(order.delivery_fee) }}</div>
+                  <div class="text-[11px] text-muted-foreground">PPN {{ formatPrice(order.ppn_amount) }}</div>
                 </div>
               </div>
-              <!-- Voucher / Promo badge -->
-              <div v-if="order.voucher || order.promo" class="mt-2 flex gap-2">
-                <span v-if="order.voucher" class="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded">
-                  Voucher: {{ order.voucher.code }}
-                </span>
-                <span v-if="order.promo" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded">
-                  Promo: {{ order.promo.code }}
-                </span>
-              </div>
+
+              <!-- Arrow -->
+              <ChevronRight class="w-4 h-4 text-muted-foreground/40 mt-0.5 shrink-0 group-hover:text-primary transition-colors" />
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </template>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Card, CardContent } from '@/components/ui/card'
+import { ref, computed, onMounted } from 'vue'
+import { ReceiptText, ChevronRight } from '@lucide/vue'
 import { buyerApi } from '@/services/buyer'
 
 const report = ref({ summary: {}, orders: [] })
 const loading = ref(true)
+const activeFilter = ref('all')
+
+const filters = [
+  { value: 'all',               label: 'Semua' },
+  { value: 'sedang_dikemas',    label: 'Dikemas' },
+  { value: 'menunggu_pengirim', label: 'Menunggu Pengirim' },
+  { value: 'sedang_dikirim',    label: 'Dikirim' },
+  { value: 'pesanan_selesai',   label: 'Selesai' },
+  { value: 'dikembalikan',      label: 'Dikembalikan' },
+]
+
+const filteredOrders = computed(() => {
+  if (activeFilter.value === 'all') return report.value.orders ?? []
+  return (report.value.orders ?? []).filter(o => o.status === activeFilter.value)
+})
+
+function filterCount(status) {
+  return (report.value.orders ?? []).filter(o => o.status === status).length
+}
 
 function formatPrice(p) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p ?? 0)
@@ -98,11 +136,11 @@ function formatDate(d) {
 }
 
 const STATUS_MAP = {
-  sedang_dikemas: { label: 'Sedang Dikemas', class: 'bg-yellow-100 text-yellow-700' },
-  menunggu_pengirim: { label: 'Menunggu Pengirim', class: 'bg-blue-100 text-blue-700' },
-  sedang_dikirim: { label: 'Sedang Dikirim', class: 'bg-indigo-100 text-indigo-700' },
-  pesanan_selesai: { label: 'Pesanan Selesai', class: 'bg-green-100 text-green-700' },
-  dikembalikan: { label: 'Dikembalikan', class: 'bg-red-100 text-red-700' },
+  sedang_dikemas:     { label: 'Sedang Dikemas',    class: 'bg-amber-100 text-amber-700' },
+  menunggu_pengirim:  { label: 'Menunggu Pengirim', class: 'bg-blue-100 text-blue-700' },
+  sedang_dikirim:     { label: 'Sedang Dikirim',    class: 'bg-indigo-100 text-indigo-700' },
+  pesanan_selesai:    { label: 'Pesanan Selesai',   class: 'bg-green-100 text-green-700' },
+  dikembalikan:       { label: 'Dikembalikan',      class: 'bg-red-100 text-red-700' },
 }
 
 function statusLabel(s) { return STATUS_MAP[s]?.label ?? s }

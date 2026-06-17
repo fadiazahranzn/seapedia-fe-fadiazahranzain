@@ -1,9 +1,6 @@
 <template>
   <div class="page-detail">
-    <button class="back-btn" @click="router.back()">
-      <ArrowLeft :size="16" />
-      Kembali
-    </button>
+    <button class="back-btn" @click="router.back()">← Kembali ke Katalog</button>
 
     <!-- Skeleton -->
     <div v-if="loading" class="detail-grid">
@@ -30,43 +27,88 @@
       <!-- Left: Image -->
       <div>
         <div class="detail-img-wrap">
-          <img v-if="product.image_url" :src="product.image_url" :alt="product.name" />
-          <Package v-else :size="96" color="#cbd5e1" />
+          <img v-if="activeImg" :src="activeImg" :alt="product.name" />
+          <Package v-else :size="96" color="#f3c6d4" />
+          <span v-if="product.original_price" class="img-badge">SALE</span>
+        </div>
+        <div class="thumb-strip">
+          <div
+            v-for="(img, i) in thumbImages"
+            :key="i"
+            class="thumb-item"
+            :class="{ active: activeImg === img }"
+            @click="activeImg = img"
+          >
+            <img v-if="img" :src="img" :alt="product.name" />
+            <Package v-else :size="22" color="#f3c6d4" />
+          </div>
         </div>
       </div>
 
       <!-- Right: Info -->
       <div class="detail-info">
-        <div class="detail-badges">
-          <span v-if="product.category" class="badge badge-outline">{{ product.category }}</span>
-          <span v-if="product.brand" class="badge badge-muted">{{ product.brand }}</span>
+        <!-- Tags -->
+        <div class="detail-tags">
+          <span v-if="product.category" class="tag tag-cat">{{ product.category }}</span>
+          <span v-if="product.brand" class="tag tag-brand">{{ product.brand }}</span>
         </div>
 
+        <!-- Name -->
         <h1 class="detail-name">{{ product.name }}</h1>
-        <div class="detail-price">{{ formatPrice(product.price) }}</div>
 
-        <div class="stock-row">
-          <span class="stock-label">Stok:</span>
-          <span v-if="product.stock > 0" class="badge badge-success">{{ product.stock }} tersedia</span>
-          <span v-else class="badge badge-destructive">Habis</span>
+        <!-- Rating -->
+        <div v-if="product.rating" class="detail-rating">
+          <span class="stars">{{ '★'.repeat(Math.floor(product.rating)) }}</span>
+          <span class="stars-empty">{{ '★'.repeat(5 - Math.floor(product.rating)) }}</span>
+          <span class="rating-score">{{ product.rating }}</span>
+          <span class="rating-divider">·</span>
+          <span class="rating-count">{{ product.review_count ?? 0 }} ulasan</span>
+          <span class="rating-divider">·</span>
+          <span class="rating-count">{{ product.sold_count ?? 0 }} terjual</span>
         </div>
 
-        <div v-if="product.description" class="desc-text">{{ product.description }}</div>
+        <!-- Price -->
+        <div class="price-row">
+          <div class="detail-price">{{ formatPrice(product.price) }}</div>
+          <div v-if="product.original_price" class="detail-price-orig">{{ formatPrice(product.original_price) }}</div>
+          <div v-if="product.original_price" class="discount-badge">-{{ discountPercent }}%</div>
+        </div>
+
+        <!-- Stock -->
+        <div class="stock-row">
+          <span class="stock-label">Stok</span>
+          <span v-if="product.stock > 0" class="stock-badge-ok">{{ product.stock }} tersedia</span>
+          <span v-else class="stock-badge-out">Habis</span>
+        </div>
+
+        <hr class="divider" />
 
         <!-- Store -->
         <div class="store-card">
           <div class="store-avatar">
-            <Store :size="18" color="#6366f1" />
+            <Store :size="20" color="#c41952" />
           </div>
           <div>
             <div class="store-name">{{ product.store?.name }}</div>
             <div class="store-desc">{{ product.store?.description || 'Toko resmi SEAPEDIA' }}</div>
+            <div v-if="product.store?.location" class="store-location">
+              <MapPin :size="10" />
+              {{ product.store.location }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div v-if="product.description">
+          <div class="section-title">Deskripsi Produk</div>
+          <div class="desc-box">
+            <p class="desc-text">{{ product.description }}</p>
           </div>
         </div>
 
         <!-- Specs -->
         <div v-if="product.specifications && Object.keys(product.specifications).length">
-          <div class="detail-section-title">Spesifikasi</div>
+          <div class="section-title">Spesifikasi</div>
           <div class="specs-grid">
             <div v-for="(val, key) in product.specifications" :key="key" class="spec-item">
               <div class="spec-key">{{ key }}</div>
@@ -75,35 +117,45 @@
           </div>
         </div>
 
+        <hr class="divider" />
+
         <!-- Qty + CTA -->
-        <div class="buy-row">
-          <div class="qty-control">
-            <button class="qty-btn" @click="qty = Math.max(1, qty - 1)">−</button>
-            <div class="qty-val">{{ qty }}</div>
-            <button class="qty-btn" @click="qty = Math.min(product.stock, qty + 1)">+</button>
+        <div class="buy-section">
+          <div class="qty-row">
+            <span class="qty-label">Jumlah</span>
+            <div class="qty-control">
+              <button class="qty-btn" @click="qty = Math.max(1, qty - 1)">−</button>
+              <div class="qty-val">{{ qty }}</div>
+              <button class="qty-btn" @click="qty = Math.min(product.stock, qty + 1)">+</button>
+            </div>
           </div>
 
-          <RouterLink v-if="!auth.isLoggedIn" to="/login" class="btn-add-cart">
-            Login untuk Beli
-          </RouterLink>
-          <button
-            v-else-if="auth.activeRole !== 'buyer'"
-            class="btn-add-cart"
-            disabled
-            style="background:linear-gradient(135deg,#94a3b8,#64748b);box-shadow:none;"
-          >
-            Aktifkan role Buyer
-          </button>
-          <button
-            v-else
-            class="btn-add-cart"
-            :disabled="product.stock === 0 || adding"
-            @click="addToCart"
-          >
-            <span v-if="adding" class="spinner" />
-            <ShoppingCart v-else :size="16" />
-            {{ adding ? 'Menambahkan...' : product.stock === 0 ? 'Stok Habis' : 'Tambah ke Keranjang' }}
-          </button>
+          <div class="btn-row">
+            <RouterLink v-if="!auth.isLoggedIn" to="/login" class="btn-cart">
+              🛒 Keranjang
+            </RouterLink>
+            <template v-else>
+              <button
+                class="btn-cart"
+                :disabled="product.stock === 0 || adding || auth.activeRole !== 'buyer'"
+                @click="addToCart(false)"
+              >
+                <span v-if="adding" class="spinner" />
+                <template v-else>🛒 Keranjang</template>
+              </button>
+              <button
+                class="btn-buy"
+                :disabled="product.stock === 0 || adding || auth.activeRole !== 'buyer'"
+                @click="addToCart(true)"
+              >
+                ⚡ Beli Sekarang
+              </button>
+            </template>
+          </div>
+
+          <p v-if="auth.isLoggedIn && auth.activeRole !== 'buyer'" class="role-hint">
+            Aktifkan role Buyer untuk membeli produk.
+          </p>
         </div>
       </div>
     </div>
@@ -111,9 +163,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
-import { ArrowLeft, Package, Store, ShoppingCart } from '@lucide/vue'
+import { Package, Store, MapPin } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import api from '@/services/api'
 import { buyerApi } from '@/services/buyer'
@@ -126,17 +178,32 @@ const product = ref(null)
 const loading = ref(true)
 const qty = ref(1)
 const adding = ref(false)
+const activeImg = ref(null)
+
+const discountPercent = computed(() => {
+  if (!product.value?.original_price) return 0
+  return Math.round((1 - product.value.price / product.value.original_price) * 100)
+})
+
+const thumbImages = computed(() => {
+  if (!product.value) return []
+  const imgs = product.value.images?.length
+    ? [...product.value.images]
+    : [product.value.image_url || null]
+  while (imgs.length < 4) imgs.push(null)
+  return imgs.slice(0, 4)
+})
 
 function formatPrice(price) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(price)
 }
 
-async function addToCart() {
+async function addToCart(buyNow = false) {
   adding.value = true
   try {
     await buyerApi.addItem({ product_id: product.value.id, quantity: qty.value })
     toast.success('Produk ditambahkan ke keranjang!')
-    router.push('/buyer/cart')
+    router.push(buyNow ? '/buyer/checkout' : '/buyer/cart')
   } catch (e) {
     const msg = e.response?.data?.message || 'Gagal menambahkan.'
     if (e.response?.data?.conflict) {
@@ -144,7 +211,7 @@ async function addToCart() {
         await buyerApi.clearCart()
         await buyerApi.addItem({ product_id: product.value.id, quantity: qty.value })
         toast.success('Produk ditambahkan ke keranjang!')
-        router.push('/buyer/cart')
+        router.push(buyNow ? '/buyer/checkout' : '/buyer/cart')
       }
     } else {
       toast.error(msg)
@@ -156,6 +223,7 @@ onMounted(async () => {
   try {
     const { data } = await api.get(`/products/${route.params.id}`)
     product.value = data.data || data
+    activeImg.value = product.value?.image_url || null
   } catch { product.value = null }
   finally { loading.value = false }
 })
@@ -166,78 +234,147 @@ onMounted(async () => {
 
 .back-btn {
   display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 500; color: #64748b;
+  font-size: 13px; font-weight: 600; color: #a06070;
   background: none; border: none; cursor: pointer; font-family: inherit;
-  padding: 6px 10px; border-radius: 0.5rem; margin-bottom: 28px;
+  padding: 6px 10px; border-radius: 9999px; margin-bottom: 28px;
   transition: background .15s, color .15s;
 }
-.back-btn:hover { background: #f1f5f9; color: #0f172a; }
+.back-btn:hover { background: #fce7ef; color: #c41952; }
 
 .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; }
 @media (max-width: 768px) { .detail-grid { grid-template-columns: 1fr; gap: 24px; } }
 
+/* IMAGE */
 .detail-img-wrap {
-  aspect-ratio: 1; background: #f1f5f9; border-radius: 1rem;
-  border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; overflow: hidden;
+  aspect-ratio: 1; background: #fff; border-radius: 20px;
+  border: 1.5px solid #f3e0e6;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; position: relative;
 }
 .detail-img-wrap img { width: 100%; height: 100%; object-fit: cover; }
-
-.detail-info { display: flex; flex-direction: column; gap: 20px; }
-.detail-badges { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.badge { display: inline-flex; align-items: center; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 9999px; }
-.badge-outline { background: none; border: 1px solid #e2e8f0; color: #334155; }
-.badge-muted { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
-.badge-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-.badge-destructive { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-
-.detail-name { font-size: 26px; font-weight: 700; letter-spacing: -0.03em; color: #0f172a; line-height: 1.2; }
-.detail-price { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: #6366f1; }
-
-.stock-row { display: flex; align-items: center; gap: 8px; }
-.stock-label { font-size: 14px; color: #64748b; }
-.desc-text { font-size: 14px; color: #334155; line-height: 1.7; }
-
-.store-card {
-  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 1rem;
-  padding: 16px; display: flex; align-items: center; gap: 12px;
+.img-badge {
+  position: absolute; top: 16px; left: 16px;
+  background: #c41952; color: #fff; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; padding: 4px 12px; border-radius: 9999px;
 }
+
+/* THUMBNAILS */
+.thumb-strip { display: flex; gap: 10px; margin-top: 14px; }
+.thumb-item {
+  flex: 1; aspect-ratio: 1; background: #fff;
+  border: 2px solid #f3e0e6; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden; cursor: pointer;
+  transition: border-color .15s, transform .1s;
+}
+.thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-item:hover { border-color: #c41952; transform: translateY(-2px); }
+.thumb-item.active { border-color: #c41952; }
+
+/* INFO */
+.detail-info { display: flex; flex-direction: column; gap: 18px; }
+
+.detail-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 9999px; }
+.tag-cat  { background: #fce7ef; color: #c41952; border: 1px solid #f3c6d4; }
+.tag-brand{ background: #fff; color: #a06070; border: 1px solid #f3e0e6; }
+
+.detail-name { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; color: #1a1a1a; line-height: 1.2; }
+
+.detail-rating { display: flex; align-items: center; gap: 8px; }
+.stars       { color: #f59e0b; font-size: 15px; letter-spacing: 2px; }
+.stars-empty { color: #f3e0e6; font-size: 15px; letter-spacing: 2px; }
+.rating-score { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+.rating-count { font-size: 13px; color: #a06070; }
+.rating-divider { color: #f3e0e6; }
+
+.price-row { display: flex; align-items: flex-end; gap: 12px; }
+.detail-price { font-size: 32px; font-weight: 800; letter-spacing: -0.04em; color: #c41952; }
+.detail-price-orig { font-size: 16px; color: #a06070; text-decoration: line-through; margin-bottom: 4px; }
+.discount-badge { background: #fce7ef; color: #c41952; border: 1px solid #f3c6d4; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; margin-bottom: 4px; }
+
+.stock-row { display: flex; align-items: center; gap: 10px; }
+.stock-label { font-size: 14px; color: #a06070; font-weight: 500; }
+.stock-badge-ok  { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 9999px; }
+.stock-badge-out { background: #fef2f2; color: #ef4444; border: 1px solid #fecaca; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 9999px; }
+
+.divider { border: none; border-top: 1.5px solid #f3e0e6; }
+
+/* STORE */
+.store-card {
+  background: #fff; border: 1.5px solid #f3e0e6; border-radius: 14px;
+  padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+  cursor: pointer; transition: border-color .15s;
+}
+.store-card:hover { border-color: #f3c6d4; }
 .store-avatar {
   width: 42px; height: 42px; border-radius: 10px;
-  background: linear-gradient(135deg, #eef2ff, #e0f2fe);
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: #fce7ef; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-.store-name { font-size: 14px; font-weight: 600; color: #0f172a; }
-.store-desc { font-size: 12px; color: #64748b; margin-top: 2px; }
+.store-name { font-size: 14px; font-weight: 700; color: #1a1a1a; }
+.store-desc { font-size: 12px; color: #a06070; margin-top: 2px; }
+.store-location { font-size: 11px; color: #c41952; font-weight: 600; margin-top: 3px; display: flex; align-items: center; gap: 4px; }
 
-.detail-section-title { font-size: 13px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
+/* DESC */
+.section-title { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .06em; }
+.desc-box { background: #fff; border: 1.5px solid #f3e0e6; border-radius: 14px; padding: 16px; }
+.desc-text { font-size: 14px; color: #5a3a44; line-height: 1.75; }
+
+/* SPECS */
 .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.spec-item { background: #f1f5f9; border-radius: 0.5rem; padding: 10px 12px; }
-.spec-key { font-size: 11px; color: #64748b; margin-bottom: 2px; font-weight: 500; }
-.spec-val { font-size: 13px; font-weight: 600; color: #0f172a; }
+.spec-item { background: #fff; border: 1.5px solid #f3e0e6; border-radius: 10px; padding: 10px 14px; }
+.spec-key { font-size: 11px; color: #a06070; margin-bottom: 3px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.spec-val { font-size: 13px; font-weight: 700; color: #1a1a1a; }
 
-.buy-row { display: flex; align-items: center; gap: 12px; }
-.qty-control { display: flex; align-items: center; border: 1px solid #e2e8f0; border-radius: 0.5rem; overflow: hidden; flex-shrink: 0; }
-.qty-btn { width: 36px; height: 44px; display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 20px; color: #334155; font-family: inherit; transition: background .15s; }
-.qty-btn:hover { background: #f1f5f9; }
-.qty-val { width: 44px; text-align: center; font-size: 15px; font-weight: 600; color: #0f172a; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; height: 44px; display: flex; align-items: center; justify-content: center; }
-
-.btn-add-cart {
-  flex: 1; height: 44px; border-radius: 0.5rem; border: none; cursor: pointer; font-family: inherit;
-  font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px;
-  background: linear-gradient(135deg, #6366f1, #06b6d4); color: #fff; text-decoration: none;
-  box-shadow: 0 4px 14px rgb(99 102 241/.3); transition: opacity .15s, transform .1s;
+/* BUY */
+.buy-section { display: flex; flex-direction: column; gap: 12px; }
+.qty-row { display: flex; align-items: center; gap: 8px; }
+.qty-label { font-size: 13px; color: #a06070; font-weight: 500; }
+.qty-control {
+  display: flex; align-items: center; border: 1.5px solid #f3e0e6;
+  border-radius: 9999px; overflow: hidden; background: #fff;
 }
-.btn-add-cart:hover:not(:disabled) { opacity: .9; transform: translateY(-1px); }
-.btn-add-cart:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+.qty-btn {
+  width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+  background: none; border: none; cursor: pointer; font-size: 18px; color: #c41952; font-family: inherit;
+  transition: background .15s;
+}
+.qty-btn:hover { background: #fce7ef; }
+.qty-val {
+  width: 44px; text-align: center; font-size: 15px; font-weight: 700; color: #1a1a1a;
+  border-left: 1.5px solid #f3e0e6; border-right: 1.5px solid #f3e0e6;
+  height: 38px; display: flex; align-items: center; justify-content: center;
+}
 
-.spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
+.btn-row { display: flex; gap: 10px; }
+.btn-cart {
+  flex: 1; height: 46px; border-radius: 9999px; cursor: pointer; font-family: inherit;
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #fff; color: #c41952; border: 2px solid #c41952; text-decoration: none;
+  transition: background .15s;
+}
+.btn-cart:hover:not(:disabled) { background: #fce7ef; }
+.btn-cart:disabled { opacity: .45; cursor: not-allowed; }
+.btn-buy {
+  flex: 1; height: 46px; border-radius: 9999px; border: none; cursor: pointer; font-family: inherit;
+  font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: #c41952; color: #fff;
+  box-shadow: 0 4px 16px rgba(196,25,82,.3);
+  transition: background .15s, transform .1s;
+}
+.btn-buy:hover:not(:disabled) { background: #a0163f; transform: translateY(-1px); }
+.btn-buy:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+
+.role-hint { font-size: 12px; color: #a06070; text-align: center; }
+
+.spinner { width: 16px; height: 16px; border: 2px solid rgba(196,25,82,.3); border-top-color: #c41952; border-radius: 50%; animation: spin .7s linear infinite; flex-shrink: 0; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-.skeleton { background: linear-gradient(90deg,#f1f5f9 25%,#e2e8f0 50%,#f1f5f9 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 0.5rem; }
-.img-skeleton { aspect-ratio: 1; border-radius: 1rem; }
+.skeleton { background: linear-gradient(90deg,#fce7ef 25%,#f3c6d4 50%,#fce7ef 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 0.5rem; }
+.img-skeleton { aspect-ratio: 1; border-radius: 20px; }
 @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
 
-.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 24px; color: #94a3b8; text-align: center; }
+.empty-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 64px 24px; color: #a06070; text-align: center; }
 .empty-state p { font-size: 15px; }
-.reset-btn { font-size: 13px; color: #6366f1; background: none; border: none; cursor: pointer; font-family: inherit; text-decoration: underline; }
+.reset-btn { font-size: 13px; color: #c41952; background: none; border: none; cursor: pointer; font-family: inherit; text-decoration: underline; }
 </style>

@@ -20,10 +20,10 @@
         </nav>
 
         <div class="nav-actions">
-          <div class="nav-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-            Cari produk...
-          </div>
+          <button class="nav-icon-btn notif-btn" title="Notifikasi">
+            <Bell :size="16" />
+            <span class="notif-dot" />
+          </button>
 
           <RouterLink to="/buyer/cart" class="nav-icon-btn" v-if="auth.isLoggedIn && auth.activeRole === 'buyer'">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
@@ -98,7 +98,7 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
-import { Menu } from '@lucide/vue'
+import { Menu, Bell } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
@@ -154,14 +154,12 @@ const mobileOpen = ref(false)
 .nav-links a.router-link-exact-active { color: #c41952; background: #fce4ec; }
 
 .nav-actions { display: flex; align-items: center; gap: 8px; }
-.nav-search {
-  display: none; align-items: center; gap: 8px;
-  background: #fdf2f5; border: 1px solid #f3e0e6;
-  border-radius: 8px; padding: 7px 14px;
-  font-size: 13px; color: #a06070; cursor: pointer;
+.notif-btn { position: relative; }
+.notif-dot {
+  position: absolute; top: 6px; right: 6px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #c41952; border: 1.5px solid #fff;
 }
-@media (min-width: 900px) { .nav-search { display: flex; } }
-.nav-search svg { flex-shrink: 0; }
 
 .nav-icon-btn {
   width: 36px; height: 36px; border-radius: 8px;

@@ -1,117 +1,119 @@
 <template>
-  <div>
-    <div class="mb-1">
-      <h1 class="text-[22px] font-bold tracking-[-0.03em]">Selamat datang, {{ firstName }}! 👋</h1>
+  <div class="buyer-home">
+
+    <!-- GREETING HEADER -->
+    <div class="greeting-section">
+      <div class="greeting-text">
+        <h1 class="greeting-title">Selamat datang, {{ firstName }}! 👋</h1>
+        <p class="greeting-sub">Anda masuk sebagai <strong class="role-tag">Buyer</strong></p>
+      </div>
+      <div class="greeting-date">{{ todayLabel }}</div>
     </div>
-    <p class="text-sm text-muted-foreground mb-6">
-      Anda masuk sebagai <strong class="text-primary">Buyer</strong>
-    </p>
 
-    <!-- Stat cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-7">
-      <div
-        class="bg-card border rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-px"
-        @click="router.push('/buyer/wallet')"
-      >
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-[10px] bg-blue-50 flex items-center justify-center shrink-0">
-            <CreditCard class="w-5 h-5 text-blue-500" />
-          </div>
-          <div>
-            <p class="text-xs text-muted-foreground font-medium mb-0.5">Saldo</p>
-            <p class="text-[18px] font-bold tracking-[-0.02em] leading-none">
-              {{ walletLoading ? '...' : formatPrice(wallet?.balance ?? 0) }}
-            </p>
-          </div>
+    <!-- STAT CARDS -->
+    <div class="stat-grid">
+      <!-- Saldo -->
+      <div class="stat-card stat-card--primary" @click="router.push('/buyer/wallet')">
+        <div class="stat-card-bg" />
+        <div class="stat-icon-wrap stat-icon--blue">
+          <CreditCard :size="20" color="#3b82f6" />
         </div>
+        <div class="stat-content">
+          <p class="stat-label">Saldo Dompet</p>
+          <p class="stat-value">{{ walletLoading ? '—' : formatPrice(wallet?.balance ?? 0) }}</p>
+        </div>
+        <div class="stat-arrow">→</div>
       </div>
 
-      <div
-        class="bg-card border rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-px"
-        @click="router.push('/buyer/cart')"
-      >
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-[10px] bg-green-50 flex items-center justify-center shrink-0">
-            <ShoppingCart class="w-5 h-5 text-green-600" />
-          </div>
-          <div>
-            <p class="text-xs text-muted-foreground font-medium mb-0.5">Keranjang</p>
-            <p class="text-[18px] font-bold tracking-[-0.02em] leading-none">{{ cartCount }} item</p>
-          </div>
+      <!-- Keranjang -->
+      <div class="stat-card" @click="router.push('/buyer/cart')">
+        <div class="stat-icon-wrap stat-icon--green">
+          <ShoppingCart :size="20" color="#16a34a" />
         </div>
+        <div class="stat-content">
+          <p class="stat-label">Keranjang</p>
+          <p class="stat-value">{{ cartCount }} <span class="stat-unit">item</span></p>
+        </div>
+        <div class="stat-arrow">→</div>
       </div>
 
-      <div
-        class="bg-card border rounded-xl p-5 cursor-pointer transition-all hover:shadow-lg hover:-translate-y-px"
-        @click="router.push('/buyer/orders')"
-      >
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-[10px] bg-orange-50 flex items-center justify-center shrink-0">
-            <FileText class="w-5 h-5 text-orange-500" />
-          </div>
-          <div>
-            <p class="text-xs text-muted-foreground font-medium mb-0.5">Pesanan</p>
-            <p class="text-[18px] font-bold tracking-[-0.02em] leading-none">Lihat Semua</p>
-          </div>
+      <!-- Pesanan -->
+      <div class="stat-card" @click="router.push('/buyer/orders')">
+        <div class="stat-icon-wrap stat-icon--orange">
+          <FileText :size="20" color="#ea580c" />
         </div>
+        <div class="stat-content">
+          <p class="stat-label">Pesanan Aktif</p>
+          <p class="stat-value">{{ activeOrderCount }} <span class="stat-unit">pesanan</span></p>
+        </div>
+        <div class="stat-arrow">→</div>
       </div>
     </div>
 
-    <!-- Quick actions -->
-    <div class="flex flex-wrap gap-2.5 mb-8">
-      <button
-        class="inline-flex items-center gap-1.5 px-[18px] py-[9px] rounded-[10px] text-[13px] font-semibold text-white bg-gradient-to-br from-primary to-cyan-500 shadow-[0_4px_12px_rgba(99,102,241,0.25)] hover:opacity-90 hover:-translate-y-px transition-all border-0 cursor-pointer"
-        @click="router.push('/buyer/products')"
-      >
-        <Search class="w-3.5 h-3.5" />
+    <!-- QUICK ACTIONS -->
+    <div class="quick-actions">
+      <button class="btn-action btn-action--primary" @click="router.push('/products')">
+        <Search :size="15" />
         Jelajahi Produk
       </button>
-      <button
-        class="inline-flex items-center gap-1.5 px-[18px] py-[9px] rounded-[10px] text-[13px] font-semibold text-slate-600 bg-white border border-border hover:border-primary hover:text-primary transition-all cursor-pointer"
-        @click="router.push('/buyer/wallet')"
-      >
-        <CreditCard class="w-3.5 h-3.5" />
+      <button class="btn-action btn-action--outline" @click="router.push('/buyer/wallet')">
+        <CreditCard :size="15" />
         Top Up Saldo
+      </button>
+      <button class="btn-action btn-action--outline" @click="router.push('/buyer/orders')">
+        <FileText :size="15" />
+        Semua Pesanan
       </button>
     </div>
 
-    <!-- Recent orders -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base font-bold">Pesanan Terakhir</h2>
-      <RouterLink to="/buyer/orders" class="text-xs font-semibold text-primary hover:underline">Lihat Semua →</RouterLink>
+    <!-- RECENT ORDERS -->
+    <div class="section-header">
+      <h2 class="section-title">Pesanan Terakhir</h2>
+      <RouterLink to="/buyer/orders" class="section-link">Lihat Semua →</RouterLink>
     </div>
 
-    <div v-if="ordersLoading" class="bg-card border rounded-xl overflow-hidden">
-      <div v-for="i in 3" :key="i" class="h-[72px] bg-muted/60 animate-pulse" :class="i < 3 ? 'border-b' : ''" />
+    <!-- Skeleton -->
+    <div v-if="ordersLoading" class="orders-card">
+      <div v-for="i in 4" :key="i" class="order-skeleton">
+        <div class="skel skel-text" />
+        <div class="skel skel-badge" />
+      </div>
     </div>
 
-    <div v-else-if="recentOrders.length === 0" class="bg-card border rounded-xl py-12 text-center text-sm text-muted-foreground">
-      Belum ada pesanan.
+    <!-- Empty -->
+    <div v-else-if="recentOrders.length === 0" class="orders-empty">
+      <FileText :size="36" color="#f3c6d4" />
+      <p>Belum ada pesanan.</p>
+      <button class="btn-action btn-action--primary" style="margin-top:8px;" @click="router.push('/products')">
+        Mulai Belanja
+      </button>
     </div>
 
-    <div v-else class="bg-card border rounded-xl overflow-hidden">
+    <!-- List -->
+    <div v-else class="orders-card">
       <div
         v-for="(order, idx) in recentOrders"
         :key="order.id"
-        class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-muted/40 transition-colors"
-        :class="idx < recentOrders.length - 1 ? 'border-b' : ''"
+        class="order-row"
+        :class="{ 'order-row--last': idx === recentOrders.length - 1 }"
         @click="router.push(`/buyer/orders/${order.id}`)"
       >
-        <div>
-          <p class="text-[13px] font-semibold">#{{ order.id }}</p>
-          <p class="text-[11px] text-muted-foreground mt-0.5">
+        <div class="order-left">
+          <div class="order-id">#{{ order.id }}</div>
+          <div class="order-store">
             {{ order.store?.name }}
-            <template v-if="order.items?.length > 1"> + {{ order.items.length - 1 }} item lainnya</template>
-          </p>
+            <template v-if="order.items?.length > 1"> · +{{ order.items.length - 1 }} item</template>
+          </div>
         </div>
-        <div class="text-right">
-          <span :class="statusColor(order.status)" class="text-[12px] font-semibold rounded-full px-2.5 py-0.5 border">
+        <div class="order-right">
+          <span class="status-badge" :class="`status--${order.status}`">
             {{ statusLabel(order.status) }}
           </span>
-          <p class="text-[13px] font-bold text-primary mt-1">{{ formatPrice(order.total) }}</p>
+          <div class="order-price">{{ formatPrice(order.total) }}</div>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -132,21 +134,24 @@ const ordersLoading = ref(true)
 
 const firstName = computed(() => auth.user?.name?.split(' ')[0] ?? 'Kamu')
 const cartCount = computed(() => cart.value?.items?.reduce((s, i) => s + i.quantity, 0) ?? 0)
+const activeOrderCount = computed(() =>
+  recentOrders.value.filter(o => !['pesanan_selesai', 'dikembalikan'].includes(o.status)).length
+)
+const todayLabel = computed(() =>
+  new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+)
 
 function formatPrice(p) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p)
 }
 function statusLabel(s) {
-  return { sedang_dikemas: 'Diproses', menunggu_pengirim: 'Menunggu Pengirim', sedang_dikirim: 'Dikirim', pesanan_selesai: 'Selesai', dikembalikan: 'Dikembalikan' }[s] || s
-}
-function statusColor(s) {
   return {
-    sedang_dikemas: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-    menunggu_pengirim: 'bg-blue-50 text-blue-700 border-blue-200',
-    sedang_dikirim: 'bg-blue-50 text-blue-700 border-blue-200',
-    pesanan_selesai: 'bg-green-50 text-green-700 border-green-200',
-    dikembalikan: 'bg-red-50 text-red-700 border-red-200',
-  }[s] || 'bg-muted text-muted-foreground border-border'
+    sedang_dikemas: 'Diproses',
+    menunggu_pengirim: 'Menunggu Kurir',
+    sedang_dikirim: 'Dikirim',
+    pesanan_selesai: 'Selesai',
+    dikembalikan: 'Dikembalikan',
+  }[s] || s
 }
 
 onMounted(async () => {
@@ -162,3 +167,148 @@ onMounted(async () => {
   ordersLoading.value = false
 })
 </script>
+
+<style scoped>
+.buyer-home { display: flex; flex-direction: column; gap: 28px; }
+
+/* ── GREETING ── */
+.greeting-section {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+}
+.greeting-title {
+  font-size: 22px; font-weight: 800; letter-spacing: -0.03em; color: #1a1a1a; margin-bottom: 4px;
+}
+.greeting-sub { font-size: 13px; color: #a06070; }
+.role-tag {
+  display: inline-block; background: #fce7ef; color: #c41952;
+  border: 1px solid #f3c6d4; border-radius: 9999px;
+  padding: 1px 10px; font-size: 12px; font-weight: 700;
+}
+.greeting-date {
+  font-size: 12px; color: #a06070; font-weight: 500;
+  white-space: nowrap; padding-top: 4px;
+}
+
+/* ── STAT CARDS ── */
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+
+.stat-card {
+  background: #fff; border: 1.5px solid #f3e0e6; border-radius: 18px;
+  padding: 20px; display: flex; align-items: center; gap: 14px;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: border-color .18s, box-shadow .18s, transform .15s;
+}
+.stat-card:hover {
+  border-color: #f3c6d4; box-shadow: 0 6px 24px rgba(196,25,82,0.09);
+  transform: translateY(-2px);
+}
+.stat-card--primary {
+  background: linear-gradient(135deg, #c41952 0%, #9b1242 100%);
+  border-color: transparent;
+}
+.stat-card--primary .stat-label { color: rgba(255,255,255,0.75); }
+.stat-card--primary .stat-value { color: #fff; }
+.stat-card--primary .stat-arrow { color: rgba(255,255,255,0.6); }
+.stat-card-bg {
+  position: absolute; top: -30px; right: -30px;
+  width: 100px; height: 100px; border-radius: 50%;
+  background: rgba(255,255,255,0.07); pointer-events: none;
+}
+
+.stat-icon-wrap {
+  width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.stat-icon--blue  { background: #eff6ff; }
+.stat-icon--green { background: #f0fdf4; }
+.stat-icon--orange{ background: #fff7ed; }
+.stat-card--primary .stat-icon-wrap { background: rgba(255,255,255,0.18); }
+
+.stat-content { flex: 1; min-width: 0; }
+.stat-label { font-size: 11px; color: #a06070; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 4px; }
+.stat-value { font-size: 18px; font-weight: 800; letter-spacing: -0.03em; color: #1a1a1a; line-height: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-unit { font-size: 13px; font-weight: 500; color: #a06070; }
+.stat-arrow { font-size: 16px; color: #f3c6d4; flex-shrink: 0; }
+
+/* ── QUICK ACTIONS ── */
+.quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.btn-action {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 20px; border-radius: 10px; border: none;
+  font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit;
+  transition: background .15s, transform .1s, box-shadow .15s;
+}
+.btn-action--primary {
+  background: #c41952; color: #fff;
+  box-shadow: 0 4px 14px rgba(196,25,82,0.28);
+}
+.btn-action--primary:hover { background: #a0153f; transform: translateY(-1px); }
+.btn-action--outline {
+  background: #fff; color: #4b1f30;
+  border: 1.5px solid #f3e0e6;
+}
+.btn-action--outline:hover { border-color: #f3c6d4; color: #c41952; background: #fff0f4; }
+
+/* ── SECTION HEADER ── */
+.section-header { display: flex; align-items: center; justify-content: space-between; }
+.section-title { font-size: 15px; font-weight: 800; color: #1a1a1a; letter-spacing: -0.02em; }
+.section-link { font-size: 12px; font-weight: 600; color: #c41952; text-decoration: none; }
+.section-link:hover { text-decoration: underline; }
+
+/* ── ORDERS ── */
+.orders-card {
+  background: #fff; border: 1.5px solid #f3e0e6; border-radius: 18px; overflow: hidden;
+}
+
+.order-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; cursor: pointer; border-bottom: 1px solid #fce7ef;
+  transition: background .13s;
+}
+.order-row:hover { background: #fff8fa; }
+.order-row--last { border-bottom: none; }
+
+.order-left { min-width: 0; }
+.order-id { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+.order-store { font-size: 11px; color: #a06070; }
+
+.order-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.order-price { font-size: 13px; font-weight: 800; color: #c41952; }
+
+/* Status badges */
+.status-badge {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  padding: 3px 10px; border-radius: 9999px; border: 1px solid;
+}
+.status--sedang_dikemas       { background: #fefce8; color: #a16207; border-color: #fde68a; }
+.status--menunggu_pengirim    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.status--sedang_dikirim       { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.status--pesanan_selesai      { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+.status--dikembalikan         { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+
+/* Empty state */
+.orders-empty {
+  background: #fff; border: 1.5px solid #f3e0e6; border-radius: 18px;
+  padding: 48px 24px; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  color: #a06070; font-size: 14px; text-align: center;
+}
+
+/* Skeleton */
+.order-skeleton {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px; border-bottom: 1px solid #fce7ef;
+}
+.skel {
+  background: linear-gradient(90deg, #fce7ef 25%, #f9d0dc 50%, #fce7ef 75%);
+  background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 6px;
+}
+.skel-text  { height: 32px; width: 45%; }
+.skel-badge { height: 28px; width: 22%; }
+@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .greeting-date { display: none; }
+}
+</style>

@@ -130,7 +130,7 @@
 
         <div class="products-grid">
           <template v-if="loading">
-            <div v-for="i in 8" :key="i" class="product-card skeleton-card">
+            <div v-for="i in 5" :key="i" class="product-card skeleton-card">
               <div class="skeleton img-skeleton" />
               <div class="product-body">
                 <div class="skeleton" style="height:10px;width:55%;margin-bottom:6px;" />
@@ -151,9 +151,9 @@
               <div class="product-img">
                 <img v-if="product.image_url" :src="product.image_url" :alt="product.name" />
                 <Package v-else :size="48" color="#f3c6d4" />
-                <span v-if="idx % 4 === 0" class="product-badge">SALE</span>
-                <span v-else-if="idx % 4 === 1" class="product-badge new">NEW</span>
-                <span v-else-if="idx % 4 === 3" class="product-badge hot">HOT</span>
+                <span v-if="idx % 5 === 0 || idx % 5 === 4" class="product-badge">SALE</span>
+                <span v-else-if="idx % 5 === 1" class="product-badge new">NEW</span>
+                <span v-else-if="idx % 5 === 3" class="product-badge hot">HOT</span>
               </div>
               <div class="product-body">
                 <div class="product-store">{{ product.store?.name }}</div>
@@ -341,7 +341,7 @@ function formatPrice(price) {
 onMounted(async () => {
   try {
     const [prodRes, reviewRes] = await Promise.allSettled([
-      api.get('/products', { params: { per_page: 8 } }),
+      api.get('/products', { params: { per_page: 5 } }),
       api.get('/reviews',  { params: { per_page: 3 } }),
     ])
     if (prodRes.status === 'fulfilled')   products.value     = prodRes.value.data.data   || prodRes.value.data
@@ -503,9 +503,9 @@ onMounted(async () => {
 .promo-card-main { background: linear-gradient(135deg, #c41952 0%, #8b0f36 100%); }
 .promo-card-side { background: #fdf2f5; border: 1px solid #f3e0e6; }
 .promo-discount {
-  position: absolute; top: 28px; right: 32px;
-  font-size: 52px; font-weight: 900; color: rgba(255,255,255,0.1);
-  letter-spacing: -0.04em; line-height: 1;
+  position: absolute; top: 50%; right: 28px; transform: translateY(-50%);
+  font-size: 96px; font-weight: 900; color: rgba(255,255,255,0.25);
+  letter-spacing: -0.06em; line-height: 1; pointer-events: none; user-select: none;
 }
 .promo-tag {
   display: inline-block; background: rgba(255,255,255,0.2);
@@ -560,7 +560,7 @@ onMounted(async () => {
 .tab:not(.active):hover { color: #c41952; border-color: #f3c6d4; background: #fff0f4; }
 
 .products-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px;
 }
 .product-card {
   background: #fff; border: 1px solid #f3e0e6;

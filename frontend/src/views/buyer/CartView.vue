@@ -1,216 +1,310 @@
 <template>
   <div>
-    <div class="flex items-center justify-between mb-5">
-      <h1 class="text-[22px] font-bold tracking-[-0.03em]">Keranjang</h1>
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+      <div>
+        <h1 class="text-[22px] font-bold tracking-[-0.03em]">Keranjang</h1>
+        <p v-if="cart?.items?.length" class="text-[13px] text-muted-foreground mt-0.5">
+          {{ cart.items.length }} item{{ cart.items.length > 1 ? '' : '' }} dari
+          <span class="font-medium text-foreground">{{ cart.store?.name }}</span>
+        </p>
+      </div>
       <button
         v-if="cart?.items?.length"
-        class="text-[12px] font-semibold text-red-600 bg-transparent border-none cursor-pointer px-2.5 py-1.5 rounded-[10px] hover:bg-red-50 transition-colors"
+        class="text-[12px] font-semibold text-red-500 bg-transparent border-none cursor-pointer px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
         @click="doClear"
       >
         Kosongkan
       </button>
     </div>
 
-    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
+    <!-- Loading skeleton -->
+    <div v-if="loading" class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
       <div class="space-y-3">
-        <div v-for="i in 2" :key="i" class="h-24 bg-muted rounded-xl animate-pulse" />
+        <div v-for="i in 2" :key="i" class="h-28 bg-muted rounded-2xl animate-pulse" />
       </div>
-      <div class="h-96 bg-muted rounded-xl animate-pulse" />
+      <div class="h-[500px] bg-muted rounded-2xl animate-pulse" />
     </div>
 
-    <div v-else-if="!cart?.items?.length" class="flex flex-col items-center gap-3 py-16 text-center bg-card border rounded-xl">
-      <ShoppingCart class="w-12 h-12 text-slate-300" />
-      <p class="text-[15px] font-medium">Keranjang kosong</p>
-      <small class="text-[13px] text-muted-foreground">Tambahkan produk untuk mulai belanja</small>
+    <!-- Empty state -->
+    <div
+      v-else-if="!cart?.items?.length"
+      class="flex flex-col items-center gap-4 py-20 text-center bg-card border rounded-2xl"
+    >
+      <div class="w-16 h-16 rounded-2xl bg-primary/8 flex items-center justify-center">
+        <ShoppingCart class="w-7 h-7 text-primary/50" />
+      </div>
+      <div>
+        <p class="text-[15px] font-semibold">Keranjang masih kosong</p>
+        <small class="text-[13px] text-muted-foreground">Tambahkan produk untuk mulai belanja</small>
+      </div>
       <button
-        class="mt-2 inline-flex items-center gap-1.5 px-4 py-2 rounded-[10px] text-[13px] font-semibold text-white bg-primary hover:opacity-90 transition-opacity cursor-pointer border-0"
+        class="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl text-[13px] font-semibold text-white bg-primary hover:opacity-90 transition-opacity cursor-pointer border-0 shadow-sm"
         @click="router.push('/buyer/products')"
       >
         Belanja Sekarang
       </button>
     </div>
 
-    <div v-else class="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 items-start">
-      <!-- Cart items -->
+    <!-- Cart content -->
+    <div v-else class="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 items-start">
+
+      <!-- Left: items -->
       <div class="space-y-3">
-        <!-- Store banner -->
-        <div class="bg-card border rounded-xl px-4 py-3.5 flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-            <Store class="w-4 h-4 text-primary" />
+
+        <!-- Store info strip -->
+        <div class="bg-card border rounded-2xl px-4 py-3 flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+            <Store class="w-4.5 h-4.5 text-primary" />
           </div>
-          <div>
-            <p class="text-[14px] font-semibold">{{ cart.store?.name }}</p>
+          <div class="flex-1 min-w-0">
+            <p class="text-[13px] font-semibold truncate">{{ cart.store?.name }}</p>
+            <p class="text-[11px] text-muted-foreground">Keranjang hanya bisa dari 1 toko</p>
           </div>
-          <p class="ml-auto text-[11px] text-muted-foreground">Keranjang hanya bisa dari 1 toko</p>
         </div>
 
         <!-- Item cards -->
-        <div v-for="item in cart.items" :key="item.id" class="bg-card border rounded-xl p-4">
-          <div class="flex items-center gap-3.5">
-            <div class="w-16 h-16 rounded-[10px] bg-muted flex items-center justify-center shrink-0 overflow-hidden">
-              <img v-if="item.product?.image_url" :src="item.product.image_url" :alt="item.product?.name" class="w-full h-full object-cover" />
-              <Package v-else class="w-7 h-7 text-muted-foreground/30" />
+        <div
+          v-for="item in cart.items"
+          :key="item.id"
+          class="group bg-card border rounded-2xl p-4 transition-shadow hover:shadow-sm"
+        >
+          <div class="flex items-start gap-4">
+            <!-- Product image -->
+            <div class="w-[72px] h-[72px] rounded-xl bg-muted flex items-center justify-center shrink-0 overflow-hidden border border-border/60">
+              <img
+                v-if="item.product?.image_url"
+                :src="item.product.image_url"
+                :alt="item.product?.name"
+                class="w-full h-full object-cover"
+              />
+              <Package v-else class="w-7 h-7 text-muted-foreground/25" />
             </div>
-            <div class="flex-1 min-w-0">
-              <p class="text-[14px] font-semibold truncate">{{ item.product?.name }}</p>
-              <p class="text-[13px] font-bold text-primary mt-0.5">{{ formatPrice(item.product?.price) }}</p>
+
+            <!-- Product info -->
+            <div class="flex-1 min-w-0 pt-0.5">
+              <p class="text-[14px] font-semibold leading-snug line-clamp-2">{{ item.product?.name }}</p>
+              <p class="text-[14px] font-bold text-primary mt-1">{{ formatPrice(item.product?.price) }}</p>
             </div>
-            <div class="flex items-center gap-2 shrink-0">
-              <!-- qty control -->
-              <div class="flex items-center border rounded-[10px] overflow-hidden">
-                <button class="w-[30px] h-[30px] flex items-center justify-center hover:bg-muted text-slate-600 text-base border-0 bg-transparent cursor-pointer transition-colors" @click="updateQty(item, item.quantity - 1)">−</button>
-                <div class="w-9 h-[30px] flex items-center justify-center text-[14px] font-semibold border-x text-foreground">{{ item.quantity }}</div>
-                <button class="w-[30px] h-[30px] flex items-center justify-center hover:bg-muted text-slate-600 text-base border-0 bg-transparent cursor-pointer transition-colors" @click="updateQty(item, item.quantity + 1)">+</button>
+
+            <!-- Delete button -->
+            <button
+              class="w-8 h-8 flex items-center justify-center rounded-lg border-0 bg-transparent text-muted-foreground/50 cursor-pointer hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 mt-0.5"
+              @click="removeItem(item)"
+              title="Hapus item"
+            >
+              <Trash2 class="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <!-- Subtotal + qty row -->
+          <div class="flex items-center justify-between mt-3.5 pt-3 border-t border-border/60">
+            <p class="text-[12px] text-muted-foreground">
+              Subtotal:
+              <strong class="text-foreground font-semibold ml-0.5">{{ formatPrice(item.product?.price * item.quantity) }}</strong>
+            </p>
+
+            <!-- Qty stepper -->
+            <div class="flex items-center gap-0.5 bg-muted/60 rounded-xl p-0.5">
+              <button
+                class="w-7 h-7 flex items-center justify-center rounded-lg text-foreground text-[15px] font-medium border-0 bg-transparent cursor-pointer hover:bg-background hover:shadow-sm transition-all leading-none"
+                @click="updateQty(item, item.quantity - 1)"
+              >−</button>
+              <div class="w-8 h-7 flex items-center justify-center text-[13px] font-bold text-foreground">
+                {{ item.quantity }}
               </div>
               <button
-                class="w-[30px] h-[30px] flex items-center justify-center rounded-[10px] border-0 bg-transparent text-muted-foreground cursor-pointer hover:text-red-600 hover:bg-red-50 transition-colors"
-                @click="removeItem(item)"
-              >
-                <Trash2 class="w-3.5 h-3.5" />
-              </button>
+                class="w-7 h-7 flex items-center justify-center rounded-lg text-foreground text-[15px] font-medium border-0 bg-transparent cursor-pointer hover:bg-background hover:shadow-sm transition-all leading-none"
+                @click="updateQty(item, item.quantity + 1)"
+              >+</button>
             </div>
           </div>
-          <p class="text-right text-[12px] text-muted-foreground mt-2.5">
-            Subtotal: <strong class="text-foreground">{{ formatPrice(item.product?.price * item.quantity) }}</strong>
-          </p>
         </div>
       </div>
 
-      <!-- Checkout panel -->
-      <div class="bg-card border rounded-xl p-6 sticky top-[76px]">
-        <h2 class="text-[16px] font-bold mb-5">Ringkasan Pesanan</h2>
+      <!-- Right: checkout panel -->
+      <div class="bg-card border rounded-2xl overflow-hidden sticky top-[76px]">
 
-        <!-- Delivery method -->
-        <div class="mb-5">
-          <label class="text-[12px] font-semibold mb-2 block tracking-[0.01em]">Metode Pengiriman</label>
-          <div class="space-y-2">
-            <label
-              v-for="method in deliveryMethods"
-              :key="method.value"
-              class="flex items-center justify-between px-3 py-2.5 rounded-[10px] border-[1.5px] cursor-pointer transition-colors"
-              :class="selectedMethod === method.value ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/40'"
-            >
-              <div class="flex items-center gap-2">
-                <input type="radio" v-model="selectedMethod" :value="method.value" @change="loadPreview" class="accent-primary w-3.5 h-3.5" />
-                <div>
-                  <p class="text-[13px] font-medium">{{ method.label }}</p>
-                  <p class="text-[11px] text-muted-foreground">{{ method.desc }}</p>
+        <!-- Panel header -->
+        <div class="px-5 py-4 border-b bg-muted/30">
+          <h2 class="text-[15px] font-bold">Ringkasan Pesanan</h2>
+        </div>
+
+        <div class="px-5 py-5 space-y-5">
+
+          <!-- Delivery method -->
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">Metode Pengiriman</p>
+            <div class="space-y-2">
+              <label
+                v-for="method in deliveryMethods"
+                :key="method.value"
+                class="flex items-center justify-between px-3.5 py-3 rounded-xl border-[1.5px] cursor-pointer transition-all"
+                :class="selectedMethod === method.value
+                  ? 'border-primary bg-primary/5 shadow-[0_0_0_1px_rgb(var(--primary)/0.15)]'
+                  : 'border-border hover:border-primary/40 hover:bg-muted/40'"
+              >
+                <div class="flex items-center gap-2.5">
+                  <input
+                    type="radio"
+                    v-model="selectedMethod"
+                    :value="method.value"
+                    @change="loadPreview"
+                    class="accent-primary w-3.5 h-3.5 shrink-0"
+                  />
+                  <div>
+                    <p class="text-[13px] font-semibold">{{ method.label }}</p>
+                    <p class="text-[11px] text-muted-foreground">{{ method.desc }}</p>
+                  </div>
                 </div>
+                <span
+                  class="text-[12px] font-bold tabular-nums"
+                  :class="selectedMethod === method.value ? 'text-primary' : 'text-muted-foreground'"
+                >{{ formatPrice(method.fee) }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Voucher + Promo codes in a compact grid -->
+          <div class="space-y-3">
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Kode Diskon</p>
+
+            <!-- Voucher -->
+            <div>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <Tag class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+                  <input
+                    v-model="voucherCode"
+                    type="text"
+                    placeholder="Kode Voucher"
+                    :disabled="!!appliedVoucher"
+                    class="w-full h-9 pl-8 pr-3 rounded-xl border text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 uppercase font-sans bg-background transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    @keyup.enter="applyVoucher"
+                  />
+                </div>
+                <button
+                  class="h-9 px-3.5 rounded-xl border text-[12px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                  :class="appliedVoucher
+                    ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
+                    : 'border-border text-muted-foreground bg-background hover:border-primary hover:text-primary hover:bg-primary/5'"
+                  @click="applyVoucher"
+                  :disabled="applyingVoucher"
+                >
+                  {{ appliedVoucher ? 'Hapus' : 'Pakai' }}
+                </button>
               </div>
-              <span class="text-[13px] font-semibold text-slate-600">{{ formatPrice(method.fee) }}</span>
-            </label>
-          </div>
-        </div>
+              <p v-if="voucherError" class="flex items-center gap-1 text-[11px] text-red-500 mt-1.5">
+                <X class="w-3 h-3 shrink-0" /> {{ voucherError }}
+              </p>
+              <p v-if="appliedVoucher" class="flex items-center gap-1 text-[11px] text-green-600 mt-1.5">
+                <Check class="w-3 h-3 shrink-0" /> Voucher "{{ appliedVoucher.code }}" berhasil dipakai
+              </p>
+            </div>
 
-        <!-- Voucher -->
-        <div class="mb-5">
-          <label class="text-[12px] font-semibold mb-2 block tracking-[0.01em]">
-            Kode Voucher <span class="font-normal text-muted-foreground">(opsional)</span>
-          </label>
-          <div class="flex gap-2">
-            <input
-              v-model="voucherCode"
-              type="text"
-              placeholder="Contoh: SEAPEDIA10"
-              class="flex-1 h-9 px-3 rounded-[10px] border text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 uppercase font-sans bg-background transition-colors"
-              @keyup.enter="applyVoucher"
-            />
-            <button
-              class="h-9 px-3.5 rounded-[10px] border text-[12px] font-semibold text-slate-600 bg-background hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer whitespace-nowrap"
-              @click="applyVoucher"
-              :disabled="applyingVoucher"
+            <!-- Promo -->
+            <div>
+              <div class="flex gap-2">
+                <div class="relative flex-1">
+                  <Percent class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
+                  <input
+                    v-model="promoCode"
+                    type="text"
+                    placeholder="Kode Promo"
+                    :disabled="!!appliedPromo"
+                    class="w-full h-9 pl-8 pr-3 rounded-xl border text-[12px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 uppercase font-sans bg-background transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                    @keyup.enter="applyPromo"
+                  />
+                </div>
+                <button
+                  class="h-9 px-3.5 rounded-xl border text-[12px] font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                  :class="appliedPromo
+                    ? 'border-red-200 text-red-600 bg-red-50 hover:bg-red-100'
+                    : 'border-border text-muted-foreground bg-background hover:border-primary hover:text-primary hover:bg-primary/5'"
+                  @click="applyPromo"
+                  :disabled="applyingPromo"
+                >
+                  {{ appliedPromo ? 'Hapus' : 'Pakai' }}
+                </button>
+              </div>
+              <p v-if="promoError" class="flex items-center gap-1 text-[11px] text-red-500 mt-1.5">
+                <X class="w-3 h-3 shrink-0" /> {{ promoError }}
+              </p>
+              <p v-if="appliedPromo" class="flex items-center gap-1 text-[11px] text-green-600 mt-1.5">
+                <Check class="w-3 h-3 shrink-0" /> Promo "{{ appliedPromo.code }}" berhasil dipakai
+              </p>
+            </div>
+          </div>
+
+          <!-- Price breakdown -->
+          <div v-if="preview" class="bg-muted/40 rounded-xl px-4 py-3.5 space-y-2.5">
+            <div class="flex justify-between text-[12px]">
+              <span class="text-muted-foreground">Subtotal</span>
+              <span class="font-medium tabular-nums">{{ formatPrice(preview.subtotal) }}</span>
+            </div>
+            <div
+              v-if="(preview.voucher_discount ?? 0) + (preview.promo_discount ?? 0) > 0"
+              class="flex justify-between text-[12px] text-green-600"
             >
-              {{ appliedVoucher ? 'Hapus' : 'Pakai' }}
-            </button>
+              <span class="flex items-center gap-1"><Sparkles class="w-3 h-3" /> Diskon</span>
+              <span class="font-semibold tabular-nums">−{{ formatPrice((preview.voucher_discount ?? 0) + (preview.promo_discount ?? 0)) }}</span>
+            </div>
+            <div class="flex justify-between text-[12px]">
+              <span class="text-muted-foreground">Ongkir ({{ deliveryMethods.find(m => m.value === selectedMethod)?.label }})</span>
+              <span class="font-medium tabular-nums">{{ formatPrice(preview.delivery_fee) }}</span>
+            </div>
+            <div class="flex justify-between text-[12px]">
+              <span class="text-muted-foreground">PPN 12%</span>
+              <span class="font-medium tabular-nums">{{ formatPrice(preview.ppn_amount) }}</span>
+            </div>
+            <div class="flex justify-between text-[14px] font-bold pt-2 border-t border-border/60 mt-1">
+              <span>Total</span>
+              <span class="text-primary tabular-nums">{{ formatPrice(preview.total) }}</span>
+            </div>
           </div>
-          <p v-if="voucherError" class="flex items-center gap-1 text-[11px] text-red-600 mt-1.5">
-            <X class="w-3 h-3" /> {{ voucherError }}
-          </p>
-          <p v-if="appliedVoucher" class="flex items-center gap-1 text-[11px] text-green-600 mt-1.5">
-            <Check class="w-3 h-3" /> Voucher "{{ appliedVoucher.code }}" berhasil dipakai
-          </p>
-        </div>
 
-        <!-- Promo -->
-        <div class="mb-5">
-          <label class="text-[12px] font-semibold mb-2 block tracking-[0.01em]">
-            Kode Promo <span class="font-normal text-muted-foreground">(opsional)</span>
-          </label>
-          <div class="flex gap-2">
-            <input
-              v-model="promoCode"
-              type="text"
-              placeholder="Contoh: FLASHSALE"
-              class="flex-1 h-9 px-3 rounded-[10px] border text-[13px] outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 uppercase font-sans bg-background transition-colors"
-              @keyup.enter="applyPromo"
-            />
-            <button
-              class="h-9 px-3.5 rounded-[10px] border text-[12px] font-semibold text-slate-600 bg-background hover:border-primary hover:text-primary hover:bg-primary/5 transition-colors cursor-pointer whitespace-nowrap"
-              @click="applyPromo"
-              :disabled="applyingPromo"
+          <!-- Address -->
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">Alamat Pengiriman</p>
+            <Select v-model="selectedAddress">
+              <SelectTrigger class="w-full h-10 text-[13px] rounded-xl">
+                <SelectValue placeholder="Pilih alamat pengiriman" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="addr in addresses" :key="addr.id" :value="String(addr.id)">
+                  <span class="font-medium">{{ addr.label }}</span>
+                  <span class="text-muted-foreground"> — {{ addr.full_address }}, {{ addr.city }}</span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <RouterLink
+              to="/buyer/addresses"
+              class="text-[11px] text-primary hover:underline mt-1.5 inline-flex items-center gap-0.5"
             >
-              {{ appliedPromo ? 'Hapus' : 'Pakai' }}
-            </button>
+              <Plus class="w-3 h-3" /> Tambah alamat baru
+            </RouterLink>
           </div>
-          <p v-if="promoError" class="flex items-center gap-1 text-[11px] text-red-600 mt-1.5">
-            <X class="w-3 h-3" /> {{ promoError }}
+
+        </div>
+
+        <!-- Checkout footer -->
+        <div class="px-5 pb-5">
+          <p v-if="checkoutError" class="text-[12px] text-red-500 mb-3 flex items-center gap-1.5">
+            <X class="w-3.5 h-3.5 shrink-0" /> {{ checkoutError }}
           </p>
-          <p v-if="appliedPromo" class="flex items-center gap-1 text-[11px] text-green-600 mt-1.5">
-            <Check class="w-3 h-3" /> Promo "{{ appliedPromo.code }}" berhasil dipakai
-          </p>
+          <button
+            class="w-full h-12 rounded-xl border-0 text-[14px] font-bold text-white flex items-center justify-center gap-2 cursor-pointer transition-all bg-primary shadow-[0_4px_16px_hsl(var(--primary)/0.3)] hover:opacity-90 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
+            :disabled="!preview || !selectedAddress || checkingOut"
+            @click="doCheckout"
+          >
+            <Check v-if="!checkingOut" class="w-4 h-4" />
+            <svg v-else class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            {{ checkingOut ? 'Memproses...' : 'Checkout Sekarang' }}
+          </button>
         </div>
-
-        <!-- Price breakdown -->
-        <div v-if="preview" class="border-y py-3.5 mb-4 space-y-2">
-          <div class="flex justify-between text-[13px]">
-            <span class="text-muted-foreground">Subtotal</span>
-            <span>{{ formatPrice(preview.subtotal) }}</span>
-          </div>
-          <div v-if="(preview.voucher_discount ?? 0) + (preview.promo_discount ?? 0) > 0" class="flex justify-between text-[13px] text-green-600">
-            <span>Diskon</span>
-            <span>−{{ formatPrice((preview.voucher_discount ?? 0) + (preview.promo_discount ?? 0)) }}</span>
-          </div>
-          <div class="flex justify-between text-[13px]">
-            <span class="text-muted-foreground">Ongkir ({{ deliveryMethods.find(m => m.value === selectedMethod)?.label }})</span>
-            <span>{{ formatPrice(preview.delivery_fee) }}</span>
-          </div>
-          <div class="flex justify-between text-[13px]">
-            <span class="text-muted-foreground">PPN 12%</span>
-            <span>{{ formatPrice(preview.ppn_amount) }}</span>
-          </div>
-          <div class="flex justify-between text-[15px] font-bold mt-1 pt-1">
-            <span>Total</span>
-            <span class="text-primary">{{ formatPrice(preview.total) }}</span>
-          </div>
-        </div>
-
-        <!-- Address -->
-        <div class="mb-0">
-          <label class="text-[12px] font-semibold mb-2 block tracking-[0.01em]">Alamat Pengiriman</label>
-          <Select v-model="selectedAddress">
-            <SelectTrigger class="w-full h-9 text-[13px] rounded-[10px]">
-              <SelectValue placeholder="Pilih alamat" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="addr in addresses" :key="addr.id" :value="String(addr.id)">
-                <span class="font-medium">{{ addr.label }}</span>
-                <span class="text-muted-foreground"> — {{ addr.full_address }}, {{ addr.city }}</span>
-              </SelectItem>
-            </SelectContent>
-          </Select>
-          <RouterLink to="/buyer/addresses" class="text-[11px] text-primary hover:underline mt-1 inline-block">+ Tambah alamat baru</RouterLink>
-        </div>
-
-        <p v-if="checkoutError" class="text-[13px] text-red-600 mt-3">{{ checkoutError }}</p>
-
-        <button
-          class="w-full h-11 mt-4 rounded-[10px] border-0 text-[14px] font-bold text-white flex items-center justify-center gap-2 cursor-pointer transition-all bg-gradient-to-br from-primary to-cyan-500 shadow-[0_4px_14px_rgba(99,102,241,0.3)] hover:opacity-90 hover:-translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0"
-          :disabled="!preview || !selectedAddress || checkingOut"
-          @click="doCheckout"
-        >
-          <Check v-if="!checkingOut" class="w-4 h-4" />
-          {{ checkingOut ? 'Memproses...' : 'Checkout Sekarang' }}
-        </button>
       </div>
     </div>
   </div>
@@ -219,7 +313,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
-import { ShoppingCart, Store, Package, Trash2, Check, X } from '@lucide/vue'
+import { ShoppingCart, Store, Package, Trash2, Check, X, Tag, Percent, Sparkles, Plus } from '@lucide/vue'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { buyerApi } from '@/services/buyer'
 import { toast } from 'vue-sonner'
