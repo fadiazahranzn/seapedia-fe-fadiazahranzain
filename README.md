@@ -36,9 +36,10 @@ Platform e-commerce multi-role berbasis web yang memungkinkan Buyer berbelanja, 
 
 ### Seller
 - Buat & kelola toko
-- Manajemen produk (tambah, edit, hapus)
+- Manajemen produk (tambah, edit, hapus) dengan upload gambar (jpg/png/webp, maks 5MB) dan video produk
+- Filter & sort produk di dashboard seller
 - Proses pesanan masuk
-- Laporan pendapatan
+- Laporan pendapatan dengan filter status & rentang tanggal
 
 ### Driver
 - Lihat job pengiriman yang tersedia
@@ -46,6 +47,11 @@ Platform e-commerce multi-role berbasis web yang memungkinkan Buyer berbelanja, 
 - Ambil & selesaikan job
 - Riwayat job & total penghasilan (80% dari delivery fee)
 - Filter riwayat berdasarkan rentang tanggal dan urutan earning
+
+### Notifikasi (Semua Role)
+- Notifikasi real-time untuk event penting (pesanan masuk, status berubah, dll)
+- Tandai notifikasi sebagai sudah dibaca (satu per satu atau semua sekaligus)
+- Dropdown notifikasi terintegrasi di navbar
 
 ### Admin
 - Dashboard statistik (user, toko, produk, pesanan, pengiriman)
@@ -517,8 +523,8 @@ Query params `/products`: `search`, `category`, `sort` (`terbaru`/`harga_asc`/`h
 | POST | `/seller/store` | Buat toko |
 | PUT | `/seller/store` | Update toko |
 | GET | `/seller/products` | Daftar produk toko |
-| POST | `/seller/products` | Tambah produk |
-| PUT | `/seller/products/{id}` | Edit produk |
+| POST | `/seller/products` | Tambah produk (multipart/form-data; `images[]`: jpg/png/webp maks 5MB, `video`: file video opsional) |
+| PUT | `/seller/products/{id}` | Edit produk (multipart/form-data; `existing_images[]` untuk mempertahankan gambar lama) |
 | DELETE | `/seller/products/{id}` | Hapus produk |
 | GET | `/seller/orders` | Daftar pesanan masuk |
 | PATCH | `/seller/orders/{id}/process` | Proses pesanan |
@@ -555,6 +561,14 @@ Query params `/products`: `search`, `category`, `sort` (`terbaru`/`harga_asc`/`h
 | GET | `/admin/promos` | Daftar promo |
 | POST | `/admin/promos` | Buat promo |
 | DELETE | `/admin/promos/{id}` | Hapus promo |
+
+### Notifikasi
+
+| Method | Endpoint | Deskripsi |
+|---|---|---|
+| GET | `/notifications` | Daftar notifikasi user yang sedang login |
+| PATCH | `/notifications/{id}/read` | Tandai satu notifikasi sebagai sudah dibaca |
+| PATCH | `/notifications/read-all` | Tandai semua notifikasi sebagai sudah dibaca |
 
 ### Ulasan & Diskon
 
