@@ -5,17 +5,111 @@
       <div class="flex items-center justify-between">
         <div>
           <h1 class="text-lg font-bold text-foreground tracking-tight">Cari Job</h1>
-          <p class="text-xs text-muted-foreground mt-0.5">{{ jobs.length }} job tersedia sekarang</p>
+          <p class="text-xs text-muted-foreground mt-0.5">{{ filteredJobs.length }} job tersedia</p>
         </div>
-        <button
-          @click="loadJobs"
-          class="flex items-center gap-1.5 text-xs font-medium text-primary bg-secondary hover:bg-accent px-3 py-2 rounded-full transition-colors duration-150 cursor-pointer"
-          :class="{ 'opacity-60 pointer-events-none': loading }"
-        >
-          <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loading }" />
-          Refresh
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            @click="showFilter = !showFilter"
+            class="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full border transition-colors cursor-pointer"
+            :class="hasActiveFilters
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            <SlidersHorizontal class="w-3.5 h-3.5" />
+            Filter
+            <span v-if="hasActiveFilters" class="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+          </button>
+          <button
+            @click="loadJobs"
+            class="flex items-center gap-1.5 text-xs font-medium text-primary bg-secondary hover:bg-accent px-3 py-2 rounded-full border border-border transition-colors duration-150 cursor-pointer"
+            :class="{ 'opacity-60 pointer-events-none': loading }"
+          >
+            <RefreshCw class="w-3.5 h-3.5" :class="{ 'animate-spin': loading }" />
+          </button>
+        </div>
       </div>
+
+    </div>
+
+    <!-- Filter Panel (below sticky header, not inside it) -->
+    <div v-if="showFilter && !loading" class="bg-card border-b border-border px-4 pt-3 pb-4 space-y-3">
+      <!-- Sort -->
+      <div>
+        <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Urutkan</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="opt in sortOptions" :key="opt.value"
+            @click="filters.sort = opt.value"
+            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer"
+            :class="filters.sort === opt.value
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Metode -->
+      <div v-if="availableMethods.length">
+        <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Metode Pengiriman</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="filters.method = ''"
+            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer"
+            :class="filters.method === ''
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            Semua
+          </button>
+          <button
+            v-for="m in availableMethods" :key="m"
+            @click="filters.method = m"
+            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer capitalize"
+            :class="filters.method === m
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            {{ formatMethod(m) }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Min Earning -->
+      <div>
+        <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Min. Earning</p>
+        <div class="flex flex-wrap gap-2">
+          <button
+            @click="filters.minEarning = 0"
+            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer"
+            :class="filters.minEarning === 0
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            Semua
+          </button>
+          <button
+            v-for="t in earningThresholds" :key="t.value"
+            @click="filters.minEarning = t.value"
+            class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer"
+            :class="filters.minEarning === t.value
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'bg-secondary text-foreground border-border hover:bg-accent'"
+          >
+            {{ t.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <button
+        v-if="hasActiveFilters"
+        @click="resetFilters"
+        class="w-full text-xs font-semibold text-destructive bg-destructive/10 hover:bg-destructive/20 py-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
+      >
+        Reset Semua Filter
+      </button>
     </div>
 
     <div class="px-4 py-4 space-y-3">
@@ -66,26 +160,30 @@
 
       <!-- Empty State -->
       <div
-        v-else-if="!jobs.length"
+        v-else-if="!filteredJobs.length"
         class="flex flex-col items-center justify-center py-20 text-center"
       >
         <div class="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-4">
           <PackageSearch class="w-9 h-9 text-muted-foreground/40" />
         </div>
-        <p class="font-semibold text-foreground">Belum ada job tersedia</p>
-        <p class="text-sm text-muted-foreground mt-1 max-w-[220px]">Coba refresh beberapa saat lagi untuk melihat job baru.</p>
+        <p class="font-semibold text-foreground">
+          {{ hasActiveFilters ? 'Tidak ada job yang sesuai filter' : 'Belum ada job tersedia' }}
+        </p>
+        <p class="text-sm text-muted-foreground mt-1 max-w-[220px]">
+          {{ hasActiveFilters ? 'Coba ubah atau reset filter.' : 'Coba refresh beberapa saat lagi.' }}
+        </p>
         <button
-          @click="loadJobs"
+          @click="hasActiveFilters ? resetFilters() : loadJobs()"
           class="mt-5 text-sm font-semibold text-primary bg-secondary hover:bg-accent px-5 py-2.5 rounded-full transition-colors cursor-pointer"
         >
-          Refresh Sekarang
+          {{ hasActiveFilters ? 'Reset Filter' : 'Refresh Sekarang' }}
         </button>
       </div>
 
       <!-- Job Cards -->
       <div v-else class="space-y-3">
         <div
-          v-for="job in jobs"
+          v-for="job in filteredJobs"
           :key="job.id"
           class="bg-card rounded-2xl overflow-hidden shadow-sm border border-border hover:shadow-md transition-shadow duration-200"
         >
@@ -93,9 +191,7 @@
           <div class="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-sm font-bold text-foreground">
-                  #{{ job.order_id }}
-                </span>
+                <span class="text-sm font-bold text-foreground">#{{ job.order_id }}</span>
                 <span class="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground border border-border">
                   <Clock class="w-2.5 h-2.5" />
                   Menunggu Driver
@@ -105,8 +201,6 @@
                 dari <span class="font-medium text-foreground">{{ job.order?.store?.name }}</span>
               </p>
             </div>
-
-            <!-- Earnings -->
             <div class="text-right shrink-0">
               <p class="text-lg font-extrabold text-primary leading-tight">
                 {{ formatPrice(job.order?.delivery_fee * 0.8) }}
@@ -115,7 +209,6 @@
             </div>
           </div>
 
-          <!-- Divider -->
           <div class="h-px bg-border mx-4" />
 
           <!-- Stats Row -->
@@ -130,7 +223,7 @@
             </div>
             <div class="bg-card px-2.5 py-2 text-center">
               <p class="text-[10px] text-muted-foreground mb-0.5">Metode</p>
-              <p class="text-xs font-semibold text-foreground capitalize">{{ (job.order?.delivery_method ?? '').replace('_', ' ') || '—' }}</p>
+              <p class="text-xs font-semibold text-foreground capitalize">{{ formatMethod(job.order?.delivery_method) }}</p>
             </div>
           </div>
 
@@ -142,9 +235,7 @@
               <div class="w-2 h-2 rounded-full border-2 border-primary" />
             </div>
             <div class="flex-1 min-w-0 space-y-1">
-              <p class="truncate">
-                <span class="font-medium text-foreground">{{ job.order?.store?.name ?? 'Toko' }}</span>
-              </p>
+              <p class="truncate"><span class="font-medium text-foreground">{{ job.order?.store?.name ?? 'Toko' }}</span></p>
               <p class="truncate">
                 {{ job.order?.address_snapshot?.full_address }}<template v-if="job.order?.address_snapshot?.city">, {{ job.order?.address_snapshot?.city }}</template>
               </p>
@@ -183,9 +274,9 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Truck, RefreshCw, Clock, ArrowRight, Loader2, PackageSearch } from '@lucide/vue'
+import { Truck, RefreshCw, Clock, ArrowRight, Loader2, PackageSearch, SlidersHorizontal } from '@lucide/vue'
 import { driverApi } from '@/services/driver'
 import { toast } from 'vue-sonner'
 
@@ -194,10 +285,66 @@ const jobs = ref([])
 const activeJob = ref(null)
 const loading = ref(true)
 const taking = reactive({})
+const showFilter = ref(false)
+
+const filters = reactive({
+  sort: 'newest',
+  method: '',
+  minEarning: 0,
+})
+
+const sortOptions = [
+  { value: 'newest', label: 'Terbaru' },
+  { value: 'earning_high', label: 'Earning ↑' },
+  { value: 'earning_low', label: 'Earning ↓' },
+]
+
+const earningThresholds = [
+  { label: '>10rb', value: 10000 },
+  { label: '>20rb', value: 20000 },
+  { label: '>50rb', value: 50000 },
+]
+
+const availableMethods = computed(() => {
+  const methods = jobs.value.map(j => j.order?.delivery_method).filter(Boolean)
+  return [...new Set(methods)]
+})
+
+const hasActiveFilters = computed(() =>
+  filters.sort !== 'newest' || filters.method !== '' || filters.minEarning > 0
+)
+
+const filteredJobs = computed(() => {
+  let result = [...jobs.value]
+
+  if (filters.method)
+    result = result.filter(j => j.order?.delivery_method === filters.method)
+
+  if (filters.minEarning > 0)
+    result = result.filter(j => (j.order?.delivery_fee ?? 0) * 0.8 >= filters.minEarning)
+
+  if (filters.sort === 'earning_high')
+    result.sort((a, b) => (b.order?.delivery_fee ?? 0) - (a.order?.delivery_fee ?? 0))
+  else if (filters.sort === 'earning_low')
+    result.sort((a, b) => (a.order?.delivery_fee ?? 0) - (b.order?.delivery_fee ?? 0))
+
+  return result
+})
+
+function resetFilters() {
+  filters.sort = 'newest'
+  filters.method = ''
+  filters.minEarning = 0
+}
 
 function formatPrice(p) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p ?? 0)
 }
+
+function formatMethod(m) {
+  return (m ?? '').replace(/_/g, ' ') || '—'
+}
+
 function formatDateTime(d) {
   if (!d) return ''
   return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })

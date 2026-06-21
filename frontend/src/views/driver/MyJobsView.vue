@@ -1,8 +1,84 @@
 <template>
   <div class="min-h-screen bg-background">
     <!-- Header -->
-    <div class="sticky top-0 z-20 bg-card/90 backdrop-blur border-b border-border px-4 py-3">
-      <h1 class="text-lg font-bold text-foreground tracking-tight">Job Saya</h1>
+    <div class="sticky top-0 z-20 bg-card/90 backdrop-blur border-b border-border">
+      <div class="flex items-center justify-between px-4 py-3">
+        <h1 class="text-lg font-bold text-foreground tracking-tight">Job Saya</h1>
+        <button
+          v-if="!loading && completedJobs.length"
+          @click="showFilter = !showFilter"
+          class="flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-full border transition-colors cursor-pointer"
+          :class="hasActiveFilters
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-secondary text-foreground border-border hover:bg-accent'"
+        >
+          <SlidersHorizontal class="w-3.5 h-3.5" />
+          Filter
+          <span v-if="hasActiveFilters" class="w-1.5 h-1.5 rounded-full bg-primary-foreground" />
+        </button>
+      </div>
+
+      <!-- Filter Panel -->
+      <div v-if="showFilter && !loading && completedJobs.length" class="px-4 pb-4 space-y-3 border-t border-border pt-3">
+        <!-- Date Range -->
+        <div>
+          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Rentang Tanggal</p>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="block">
+              <span class="text-[10px] text-muted-foreground mb-1 block">Dari</span>
+              <div
+                class="relative flex items-center bg-secondary border border-border rounded-xl px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
+                @click="$refs.dateFrom.showPicker?.()"
+              >
+                <span class="text-xs text-foreground flex-1">
+                  {{ filters.dateFrom ? formatDateShort(filters.dateFrom) : 'Pilih tanggal' }}
+                </span>
+                <CalendarDays class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input ref="dateFrom" v-model="filters.dateFrom" type="date" class="absolute inset-0 opacity-0 w-full cursor-pointer" />
+              </div>
+            </label>
+            <label class="block">
+              <span class="text-[10px] text-muted-foreground mb-1 block">Sampai</span>
+              <div
+                class="relative flex items-center bg-secondary border border-border rounded-xl px-3 py-2 cursor-pointer hover:bg-accent transition-colors"
+                @click="$refs.dateTo.showPicker?.()"
+              >
+                <span class="text-xs text-foreground flex-1">
+                  {{ filters.dateTo ? formatDateShort(filters.dateTo) : 'Pilih tanggal' }}
+                </span>
+                <CalendarDays class="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                <input ref="dateTo" v-model="filters.dateTo" type="date" class="absolute inset-0 opacity-0 w-full cursor-pointer" />
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- Sort -->
+        <div>
+          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-2">Urutkan</p>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="opt in sortOptions" :key="opt.value"
+              @click="filters.sort = opt.value"
+              class="text-xs font-medium px-3 py-1.5 rounded-full border transition-colors cursor-pointer"
+              :class="filters.sort === opt.value
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-secondary text-foreground border-border hover:bg-accent'"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Reset -->
+        <button
+          v-if="hasActiveFilters"
+          @click="resetFilters"
+          class="w-full text-xs font-semibold text-destructive bg-destructive/10 hover:bg-destructive/20 py-2 rounded-xl border border-destructive/20 transition-colors cursor-pointer"
+        >
+          Reset Semua Filter
+        </button>
+      </div>
     </div>
 
     <div class="px-4 py-4 space-y-4">
@@ -15,7 +91,7 @@
       </div>
 
       <template v-else>
-        <!-- Summary Cards -->
+        <!-- Summary Cards — selalu pakai data asli, tidak difilter -->
         <div class="grid grid-cols-3 gap-3">
           <div class="bg-card border border-border rounded-2xl px-3 py-3 text-center">
             <p class="text-[10px] text-muted-foreground mb-1">Total Job</p>
@@ -30,6 +106,15 @@
             <p class="text-sm font-extrabold text-primary leading-tight">{{ formatPrice(report.summary.total_earning) }}</p>
             <p class="text-[10px] text-muted-foreground mt-0.5">{{ report.summary.earning_rate }}</p>
           </div>
+        </div>
+
+        <!-- Earning di range filter -->
+        <div
+          v-if="hasActiveFilters && filteredCompletedJobs.length"
+          class="bg-secondary border border-border rounded-2xl px-4 py-3 flex items-center justify-between"
+        >
+          <p class="text-xs text-muted-foreground">Earning dalam rentang ini</p>
+          <p class="text-sm font-extrabold text-primary">{{ formatPrice(filteredEarning) }}</p>
         </div>
 
         <!-- Active Job -->
@@ -77,7 +162,6 @@
               </div>
             </div>
 
-            <!-- CTA -->
             <div class="px-4 pb-4">
               <button
                 :disabled="completing"
@@ -100,7 +184,12 @@
 
         <!-- Job History -->
         <div>
-          <h2 class="text-sm font-semibold text-foreground mb-2">Riwayat Job</h2>
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-foreground">Riwayat Job</h2>
+            <span v-if="hasActiveFilters" class="text-xs text-muted-foreground">
+              {{ filteredCompletedJobs.length }} dari {{ completedJobs.length }}
+            </span>
+          </div>
 
           <div v-if="!completedJobs.length" class="flex flex-col items-center py-12 text-center">
             <div class="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-3">
@@ -110,9 +199,19 @@
             <p class="text-xs text-muted-foreground mt-1">Job yang sudah kamu selesaikan akan muncul di sini.</p>
           </div>
 
+          <div v-else-if="!filteredCompletedJobs.length" class="flex flex-col items-center py-10 text-center">
+            <div class="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+              <FilterX class="w-6 h-6 text-muted-foreground/40" />
+            </div>
+            <p class="text-sm font-medium text-foreground">Tidak ada job di rentang ini</p>
+            <button @click="resetFilters" class="mt-3 text-xs font-semibold text-primary bg-secondary hover:bg-accent px-4 py-2 rounded-full transition-colors cursor-pointer">
+              Reset Filter
+            </button>
+          </div>
+
           <div v-else class="space-y-2">
             <div
-              v-for="job in completedJobs"
+              v-for="job in filteredCompletedJobs"
               :key="job.id"
               class="bg-card border border-border rounded-2xl px-4 py-3 flex items-start justify-between gap-3"
             >
@@ -140,20 +239,80 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Truck, Loader2, CheckCircle, PackageSearch } from '@lucide/vue'
+import { ref, computed, reactive, onMounted } from 'vue'
+import { Truck, Loader2, CheckCircle, PackageSearch, CalendarDays, SlidersHorizontal, FilterX } from '@lucide/vue'
 import { driverApi } from '@/services/driver'
 import { toast } from 'vue-sonner'
 
 const report = ref({ summary: {}, active_job: null, jobs: [] })
 const loading = ref(true)
 const completing = ref(false)
+const showFilter = ref(false)
+
+const filters = reactive({
+  dateFrom: '',
+  dateTo: '',
+  sort: 'newest',
+})
+
+const sortOptions = [
+  { value: 'newest', label: 'Terbaru' },
+  { value: 'oldest', label: 'Terlama' },
+  { value: 'earning_high', label: 'Earning ↑' },
+  { value: 'earning_low', label: 'Earning ↓' },
+]
 
 const completedJobs = computed(() => report.value.jobs?.filter(j => j.status === 'completed') ?? [])
+
+const hasActiveFilters = computed(() =>
+  filters.dateFrom !== '' || filters.dateTo !== '' || filters.sort !== 'newest'
+)
+
+const filteredCompletedJobs = computed(() => {
+  let result = [...completedJobs.value]
+
+  if (filters.dateFrom) {
+    const from = new Date(filters.dateFrom)
+    result = result.filter(j => j.delivered_at && new Date(j.delivered_at) >= from)
+  }
+
+  if (filters.dateTo) {
+    const to = new Date(filters.dateTo)
+    to.setHours(23, 59, 59, 999)
+    result = result.filter(j => j.delivered_at && new Date(j.delivered_at) <= to)
+  }
+
+  if (filters.sort === 'newest')
+    result.sort((a, b) => new Date(b.delivered_at) - new Date(a.delivered_at))
+  else if (filters.sort === 'oldest')
+    result.sort((a, b) => new Date(a.delivered_at) - new Date(b.delivered_at))
+  else if (filters.sort === 'earning_high')
+    result.sort((a, b) => (b.earning ?? 0) - (a.earning ?? 0))
+  else if (filters.sort === 'earning_low')
+    result.sort((a, b) => (a.earning ?? 0) - (b.earning ?? 0))
+
+  return result
+})
+
+const filteredEarning = computed(() =>
+  filteredCompletedJobs.value.reduce((sum, j) => sum + (j.earning ?? 0), 0)
+)
+
+function resetFilters() {
+  filters.dateFrom = ''
+  filters.dateTo = ''
+  filters.sort = 'newest'
+}
+
+function formatDateShort(d) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 
 function formatPrice(p) {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(p ?? 0)
 }
+
 function formatDateTime(d) {
   if (!d) return ''
   return new Date(d).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })

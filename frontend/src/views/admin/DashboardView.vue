@@ -24,8 +24,8 @@
         <button class="btn btn-outline btn-sm" @click="loadDashboard" :disabled="loading">
           <RefreshCw class="w-3 h-3" :class="{ 'spin': loading }" />
         </button>
-        <button class="btn btn-default btn-sm">
-          <Download class="w-3 h-3" /> Export
+        <button class="btn btn-default btn-sm" @click="exportExcel" :disabled="loading || exporting">
+          <Download class="w-3 h-3" /> {{ exporting ? 'Mengekspor...' : 'Export Excel' }}
         </button>
       </div>
     </div>
@@ -521,12 +521,14 @@ import {
 } from '@lucide/vue'
 import { adminApi } from '@/services/admin'
 import { toast } from 'vue-sonner'
+import ExcelJS from 'exceljs'
 
 const data = ref({})
 const loading = ref(true)
 const simulating = ref(false)
 const processing = ref(false)
 const overdueResult = ref(null)
+const exporting = ref(false)
 
 // ── Detail monitoring tabs ──
 const monTabs = [
@@ -697,6 +699,270 @@ async function simulateNextDay() {
   } catch (e) {
     toast.error(e.response?.data?.message || 'Gagal simulasi.')
   } finally { simulating.value = false }
+}
+
+// ── Excel helpers (ExcelJS) ──
+const IDR_FMT = '#,##0'
+const NUM_FMT = '#,##0'
+
+// col defs: { header, width, center?, numFmt? }
+function buildSheet(wb, sheetName, colDefs, rows) {
+  const ws = wb.addWorksheet(sheetName)
+
+  // Set column widths
+  ws.columns = colDefs.map((c, i) => ({ key: String(i), width: c.width }))
+
+  // Header row
+  const headerRow = ws.addRow(colDefs.map(c => c.header))
+  headerRow.height = 22
+  headerRow.eachCell((cell, colNum) => {
+    cell.font  = { bold: true, size: 11, color: { argb: 'FFFFFFFF' } }
+    cell.fill  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF374151' } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: false }
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FFD1D5DB' } } }
+  })
+
+  // Freeze header
+  ws.views = [{ state: 'frozen', ySplit: 1 }]
+
+  // Data rows
+  rows.forEach((rowData, ri) => {
+    const row = ws.addRow(rowData)
+    row.height = 18
+    row.eachCell((cell, colNum) => {
+      const def = colDefs[colNum - 1]
+      if (!def) return
+      cell.alignment = {
+        horizontal: def.center ? 'center' : 'left',
+        vertical: 'middle',
+      }
+      if (def.numFmt && typeof cell.value === 'number') {
+        cell.numFmt = def.numFmt
+      }
+      // Zebra stripe
+      if (ri % 2 === 1) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFAFAFA' } }
+      }
+    })
+  })
+
+  return ws
+}
+
+async function exportExcel() {
+  exporting.value = true
+  try {
+    const [usersRes, storesRes, productsRes, ordersRes, deliveriesRes, overdueRes] = await Promise.all([
+      adminApi.getUsers(),
+      adminApi.getStores(),
+      adminApi.getProducts(),
+      adminApi.getOrders(),
+      adminApi.getDeliveries(),
+      adminApi.getOverdueOrders(),
+    ])
+
+    const wb = new ExcelJS.Workbook()
+    wb.creator = 'SEAPEDIA Admin'
+    wb.created = new Date()
+    const now = new Date()
+    const dateStr = now.toISOString().slice(0, 10)
+    const o = data.value
+
+    // ── Sheet 1: Ringkasan ──
+    const wsSummary = wb.addWorksheet('Ringkasan')
+    wsSummary.columns = [{ width: 32 }, { width: 22 }]
+
+    const addTitle = (text) => {
+      wsSummary.mergeCells(`A${wsSummary.rowCount + 1}:B${wsSummary.rowCount + 1}`)
+      const row = wsSummary.lastRow
+      const cell = row.getCell(1)
+      cell.value = text
+      Object.assign(cell, excelTitleStyle())
+      row.height = 22
+      // reapply after merge
+      const merged = wsSummary.getRow(wsSummary.rowCount)
+      merged.getCell(1).value = text
+      Object.assign(merged.getCell(1), excelTitleStyle())
+    }
+
+    const addSection = (label) => {
+      const row = wsSummary.addRow([label, 'Jumlah'])
+      row.height = 20
+      row.getCell(1).font = { bold: true, size: 11, color: { argb: 'FFC41952' } }
+      row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0F5' } }
+      row.getCell(1).alignment = { vertical: 'middle' }
+      row.getCell(2).font = { bold: true, size: 11, color: { argb: 'FF6B7280' } }
+      row.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF0F5' } }
+      row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
+    }
+
+    const addDataRow = (label, value) => {
+      const row = wsSummary.addRow([label, value])
+      row.height = 18
+      row.getCell(1).alignment = { vertical: 'middle' }
+      row.getCell(2).numFmt = NUM_FMT
+      row.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' }
+    }
+
+    // Judul
+    const titleRow = wsSummary.addRow(['LAPORAN DASHBOARD ADMIN — SEAPEDIA', ''])
+    wsSummary.mergeCells(`A1:B1`)
+    titleRow.height = 28
+    const titleCell = titleRow.getCell(1)
+    titleCell.value = 'LAPORAN DASHBOARD ADMIN — SEAPEDIA'
+    titleCell.font = { bold: true, size: 14, color: { argb: 'FFC41952' } }
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' }
+
+    const periodeRow = wsSummary.addRow(['Periode', periodLabel.value])
+    periodeRow.height = 18
+    periodeRow.getCell(1).font = { bold: true }
+    periodeRow.getCell(2).alignment = { vertical: 'middle' }
+
+    const eksporRow = wsSummary.addRow(['Diekspor pada', now.toLocaleString('id-ID')])
+    eksporRow.height = 18
+    eksporRow.getCell(1).font = { bold: true }
+    eksporRow.getCell(2).alignment = { vertical: 'middle' }
+
+    wsSummary.addRow([])
+
+    addSection('PENGGUNA')
+    addDataRow('Total User',  o.users?.total   ?? 0)
+    addDataRow('Buyer',       o.users?.buyers  ?? 0)
+    addDataRow('Seller',      o.users?.sellers ?? 0)
+    addDataRow('Driver',      o.users?.drivers ?? 0)
+    wsSummary.addRow([])
+
+    addSection('PESANAN')
+    addDataRow('Total Pesanan',   o.orders?.total               ?? 0)
+    addDataRow('Sedang Dikemas',  o.orders?.sedang_dikemas      ?? 0)
+    addDataRow('Menunggu Kurir',  o.orders?.menunggu_pengirim   ?? 0)
+    addDataRow('Sedang Dikirim',  o.orders?.sedang_dikirim      ?? 0)
+    addDataRow('Selesai',         o.orders?.pesanan_selesai     ?? 0)
+    addDataRow('Dikembalikan',    o.orders?.dikembalikan        ?? 0)
+    wsSummary.addRow([])
+
+    addSection('MARKETPLACE')
+    addDataRow('Total Toko',   o.stores?.total          ?? 0)
+    addDataRow('Total Produk', o.products?.total        ?? 0)
+    addDataRow('Produk Habis', o.products?.out_of_stock ?? 0)
+    addDataRow('Overdue',      o.overdue?.total         ?? 0)
+    wsSummary.addRow([])
+
+    addSection('VOUCHER & PROMO')
+    addDataRow('Total Voucher', o.vouchers?.total  ?? 0)
+    addDataRow('Voucher Aktif', o.vouchers?.active ?? 0)
+    addDataRow('Total Promo',   o.promos?.total    ?? 0)
+    addDataRow('Promo Aktif',   o.promos?.active   ?? 0)
+
+    // ── Sheet 2: Users ──
+    const users = usersRes.data.data ?? []
+    buildSheet(wb, 'Users',
+      [
+        { header: 'ID',        width: 8,  center: true },
+        { header: 'Nama',      width: 24, center: false },
+        { header: 'Username',  width: 18, center: false },
+        { header: 'Email',     width: 32, center: false },
+        { header: 'Role',      width: 22, center: true },
+        { header: 'Bergabung', width: 16, center: true },
+      ],
+      users.map(u => [
+        u.id, u.name, u.username, u.email,
+        (u.roles ?? []).map(r => r.role ?? r).join(', '),
+        formatDate(u.created_at),
+      ])
+    )
+
+    // ── Sheet 3: Toko ──
+    const stores = storesRes.data.data ?? []
+    buildSheet(wb, 'Toko',
+      [
+        { header: 'ID',            width: 8,  center: true },
+        { header: 'Nama Toko',     width: 28, center: false },
+        { header: 'Pemilik',       width: 24, center: false },
+        { header: 'Jumlah Produk', width: 16, center: true, numFmt: NUM_FMT },
+        { header: 'Dibuat',        width: 16, center: true },
+      ],
+      stores.map(s => [s.id, s.name, s.user?.name ?? '—', s.products_count ?? 0, formatDate(s.created_at)])
+    )
+
+    // ── Sheet 4: Produk ──
+    const products = productsRes.data.data ?? []
+    buildSheet(wb, 'Produk',
+      [
+        { header: 'ID',          width: 8,  center: true },
+        { header: 'Nama Produk', width: 34, center: false },
+        { header: 'Toko',        width: 26, center: false },
+        { header: 'Harga (IDR)', width: 18, center: true, numFmt: IDR_FMT },
+        { header: 'Stok',        width: 10, center: true, numFmt: NUM_FMT },
+      ],
+      products.map(p => [p.id, p.name, p.store?.name ?? '—', Number(p.price) || 0, p.stock ?? 0])
+    )
+
+    // ── Sheet 5: Pesanan ──
+    const orders = ordersRes.data.data ?? []
+    buildSheet(wb, 'Pesanan',
+      [
+        { header: 'ID',          width: 8,  center: true },
+        { header: 'Pembeli',     width: 24, center: false },
+        { header: 'Toko',        width: 24, center: false },
+        { header: 'Total (IDR)', width: 18, center: true, numFmt: IDR_FMT },
+        { header: 'Status',      width: 22, center: true },
+        { header: 'Tanggal',     width: 16, center: true },
+      ],
+      orders.map(o2 => [o2.id, o2.user?.name ?? '—', o2.store?.name ?? '—', Number(o2.total) || 0, statusLabel(o2.status), formatDate(o2.created_at)])
+    )
+
+    // ── Sheet 6: Pengiriman ──
+    const deliveries = deliveriesRes.data.data ?? []
+    buildSheet(wb, 'Pengiriman',
+      [
+        { header: 'ID',           width: 8,  center: true },
+        { header: 'Order ID',     width: 10, center: true },
+        { header: 'Driver',       width: 22, center: false },
+        { header: 'Metode',       width: 16, center: true },
+        { header: 'Status',       width: 14, center: true },
+        { header: 'Earning (IDR)',width: 18, center: true, numFmt: IDR_FMT },
+        { header: 'Diambil',      width: 16, center: true },
+        { header: 'Selesai',      width: 16, center: true },
+      ],
+      deliveries.map(d => [
+        d.id, d.order_id, d.driver?.name ?? '—', d.order?.delivery_method ?? '—',
+        d.status, Number(d.earning) || 0,
+        d.picked_up_at ? formatDate(d.picked_up_at) : '—',
+        d.delivered_at ? formatDate(d.delivered_at) : '—',
+      ])
+    )
+
+    // ── Sheet 7: Overdue ──
+    const overdue = overdueRes.data.data ?? []
+    buildSheet(wb, 'Overdue',
+      [
+        { header: 'Order ID', width: 12, center: true },
+        { header: 'User ID',  width: 12, center: true },
+        { header: 'Metode',   width: 20, center: true },
+        { header: 'Status',   width: 22, center: true },
+        { header: 'Dibuat',   width: 16, center: true },
+      ],
+      overdue.map(o3 => [o3.id, o3.user_id, o3.delivery_method ?? '—', statusLabel(o3.status), formatDate(o3.created_at)])
+    )
+
+    // ── Download ──
+    const buffer = await wb.xlsx.writeBuffer()
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `seapedia-dashboard-${dateStr}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    toast.success('Export berhasil!')
+  } catch (e) {
+    console.error(e)
+    toast.error('Gagal export data.')
+  } finally {
+    exporting.value = false
+  }
 }
 
 async function processOverdue() {

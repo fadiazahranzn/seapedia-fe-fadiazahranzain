@@ -42,13 +42,16 @@ Platform e-commerce multi-role berbasis web yang memungkinkan Buyer berbelanja, 
 
 ### Driver
 - Lihat job pengiriman yang tersedia
+- Filter job berdasarkan metode pengiriman, min. earning, dan urutan
 - Ambil & selesaikan job
 - Riwayat job & total penghasilan (80% dari delivery fee)
+- Filter riwayat berdasarkan rentang tanggal dan urutan earning
 
 ### Admin
 - Dashboard statistik (user, toko, produk, pesanan, pengiriman)
 - Manajemen voucher & promo
 - Monitoring overdue order dengan sistem refund & reversal otomatis
+- Export dashboard ke Excel (.xlsx) dengan 7 sheet (Ringkasan, Users, Toko, Produk, Pesanan, Pengiriman, Overdue)
 
 ---
 
@@ -62,6 +65,7 @@ Platform e-commerce multi-role berbasis web yang memungkinkan Buyer berbelanja, 
 | Frontend | Vue 3, Vite, Pinia |
 | UI | Tailwind CSS v4, shadcn-vue, Lucide Icons |
 | HTTP Client | Axios |
+| Export | ExcelJS (export dashboard ke .xlsx) |
 
 ---
 
@@ -411,18 +415,21 @@ Login sebagai seller1 (role: seller)
 #### 3. Driver Antar Pesanan
 ```
 Login sebagai driver1 (role: driver)
-→ Buka /driver → lihat job tersedia
-→ Klik "Ambil Job" → status berubah ke Sedang Dikirim
-→ Klik "Selesai" → status berubah ke Pesanan Selesai
+→ Buka /driver/jobs → lihat job tersedia
+→ (Opsional) Klik "Filter" untuk filter berdasarkan metode, min. earning, atau urutan
+→ Klik "Ambil Job Ini" → status berubah ke Sedang Dikirim
+→ Buka /driver/my-jobs → klik "Konfirmasi Pesanan Selesai"
+→ Status berubah ke Pesanan Selesai, earning tercatat di riwayat
 ```
 
-#### 4. Admin - Overdue Simulation
+#### 4. Admin - Overdue Simulation & Export
 ```
 Login sebagai admin (role: admin)
 → Buka /admin/dashboard → lihat statistik
 → POST /api/admin/simulate-next-day beberapa kali (lewati SLA)
 → GET /api/admin/overdue → lihat pesanan overdue
 → POST /api/admin/overdue/process → proses refund otomatis
+→ Klik "Export Excel" → download file .xlsx berisi 7 sheet data platform
 ```
 
 #### 5. Security Test
